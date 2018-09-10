@@ -8,14 +8,15 @@ enum Occupations {
     prison,
 } 
 
+enum Commands {
+    status = "status",
+    work = "work",
+    crime = "hustle",
+    office = "office",
+    prison = "prison",
+}
+
 export class Plugin extends AbstractPlugin {
-
-  private static readonly STATUS_CMD = "status";
-  private static readonly WORK_CMD = "work";
-  private static readonly CRIME_CMD = "crime";
-
-  private static readonly OFFICE_CMD = "office";
-  private static readonly PRISON_CMD = "prison";
 
   private states: { [key:string] : {type: Occupations; }} = {}
 
@@ -70,15 +71,23 @@ export class Plugin extends AbstractPlugin {
       if (successful) {
         const scoreToGain = waitingTime * 100;
         user.addToScore(scoreToGain);
-        return prefix + "You hustled and made  " + scoreToGain + " internet points. ";
+        return prefix + "💰 You hustled and made  " + scoreToGain + " internet points. ";
       } else {
         this.states[username] = { type: Occupations.prison };
         const prisonTime = this.getRandomWaitingTime(10, 20);
         setTimeout(()=> {
-            delete this.states[username;
+            delete this.states[username];
         }, 60000 * prisonTime);
-        return prefix + "Yikes. The police 👮🏻‍ got a hold of you. You're in prison for " + prisonTime + " minutes";
+        return prefix + "👮🏻‍ The police got a hold of you. You're going to prison for " + prisonTime + " minutes.";
       } 
+  }
+
+  private explainStatus(occupation: Occupations): string {
+    switch (occupation) {
+        case Occupations.working: return " 🏢 You are currently working.";
+        case Occupations.prison: return "🔒 You are currently locked up with a sexually frustrated cellmate.";
+    }
+    return "🍟 You are free to do as you like";
   }
 
   private listOfficeWorkers(): string {
@@ -86,7 +95,7 @@ export class Plugin extends AbstractPlugin {
         if (usernames.length == 0 ) {
             return "It's an empty day at the AFK office..";
         }
-        return "🏢 People slaving at the AFK office: 🏢  \n- " + usernames.join("\n- ");
+        return "🏢 <b> People slaving at the AFK office </b> 🏢  \n-\t" + usernames.join("\n-\t");
   }
 
   private listPrisonInmates(): string {
@@ -94,37 +103,38 @@ export class Plugin extends AbstractPlugin {
     if (usernames.length == 0 ) {
         return "AFK State Penitentiary is completely empty..";
     }
-    return "🔒 Inmates at the AFK State Penitentiary: 🔒  \n- " + usernames.join("\n- ");
+    return "🔒 <b> Inmates at the AFK State Penitentiary </b> 🔒  \n-\t" + usernames.join("\n-\t");
 }
 
   private lifeRouter(chat: Chat, user: User, msg: any, match: string[]): string {
     const occupation = this.getOccupation(msg.from.username);
     const prefix = "@" + msg.from.username + " : ";
-    
-    if (this.getSubCommand(msg) == Plugin.STATUS_CMD) {
-        switch (occupation) {
-            case Occupations.working: return prefix + "You are currently working.";
-            case Occupations.prison: return prefix + "You are currently behind bars.";
-            case null: return prefix + "You are free to do as you like";
+    const subCommand = this.getSubCommand(msg);
+
+    switch(subCommand) {
+        case Commands.status: {
+            return prefix + this.explainStatus(occupation);
         }
-    } else if (this.getSubCommand(msg) == Plugin.OFFICE_CMD) {
-        return this.listOfficeWorkers();
-    } else if (this.getSubCommand(msg) == Plugin.PRISON_CMD) {
-        return this.listPrisonInmates();
-    } 
+        case Commands.office: {
+            return this.listOfficeWorkers();
+        }
+        case Commands.prison: {
+            return this.listPrisonInmates();
+        }
+    }
 
     if (occupation == Occupations.working) {
         return prefix + "You are not done 'working' yet.";
     } else if (occupation == Occupations.prison) {
-        return prefix + "You are still in prison. Get someone to break you out."; 
+        return prefix + "You are still in prison."; 
     }
     
-    switch(this.getSubCommand(msg)) {
-        case Plugin.WORK_CMD: {
+    switch(subCommand) {
+        case Commands.work: {
             const minutesWorking = this.startWorking(user, msg.from.username);
             return prefix + "You started working. You'll get paid in " + minutesWorking + " minutes. ";
         }
-        case Plugin.CRIME_CMD: {
+        case Commands.crime: {
             return this.commitCrime(user, msg.from.username);
         }
     }
