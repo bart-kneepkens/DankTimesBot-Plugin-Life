@@ -19,7 +19,7 @@ enum Commands {
 
 export class Plugin extends AbstractPlugin {
 
-  private states: { [key:string] : {type: Occupations; }} = {}
+  private userOccupations: { [key:string] : {type: Occupations; }} = {}
 
   constructor() {
     super("Life", "1.0.0");
@@ -29,7 +29,7 @@ export class Plugin extends AbstractPlugin {
    * @override
    */
   public getPluginSpecificCommands(): BotCommand[] {
-    const lifeBaseCommand = new BotCommand("life", "control your virtual life", this.lifeRouter.bind(this));
+    const lifeBaseCommand = new BotCommand("life", "control your virtual life. \n - /life work \n - /life hustle \n - /life breakout \n - /life office \n - /life prison", this.lifeRouter.bind(this));
     return [lifeBaseCommand];
   }
 
@@ -38,22 +38,23 @@ export class Plugin extends AbstractPlugin {
   } 
 
   private getOccupation(username: string): Occupations {
-      if (this.states[username] == null) {
-        return null;
-      }
-      return this.states[username].type;
+      return this.userOccupations[username] == null ? null : this.userOccupations[username].type;
   }
 
   private getRandomWaitingTime(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
+  private prefixForUsername(username: String) {
+      return "@" + username + ": ";
+  }
+
   private startWorking(user: User, username: string): number {
     const waitingTime = this.getRandomWaitingTime(2, 10);
-    this.states[username] = { type: Occupations.working };
+    this.userOccupations[username] = { type: Occupations.working };
 
     setTimeout(()=> {
-        delete this.states[username];
+        delete this.userOccupations[username];
         user.addToScore(waitingTime * 15);
     }, 60000 * waitingTime);
     return waitingTime;
@@ -61,44 +62,39 @@ export class Plugin extends AbstractPlugin {
 
   private commitCrime(user: User, username: string): string {
     const waitingTime = this.getRandomWaitingTime(2, 5);
-    const prefix = "@" + username + " : ";
+    const prefix = this.prefixForUsername(username);
 
     let successful = Math.random() >= 0.5;
-    // Second chance for lowlife thugs
-      if (user.score < 1000 && !successful) {
-        successful = Math.random() >= 0.4;
-      }
-      
-      if (successful) {
+    if (successful) {
         const scoreToGain = waitingTime * 100;
         user.addToScore(scoreToGain);
         return prefix + "You hustled and made  " + scoreToGain + " internet points 💰";
-      } else {
-        this.states[username] = { type: Occupations.prison };
+    } else {
+        this.userOccupations[username] = { type: Occupations.prison };
         const prisonTime = this.getRandomWaitingTime(10, 20);
         setTimeout(()=> {
-            delete this.states[username];
+            delete this.userOccupations[username];
         }, 60000 * prisonTime);
-        return prefix + "<b> The police got a hold of you.</b> You're going to prison for " + prisonTime + " minutes👮🏻‍ ";
+        return prefix + "<b>The police got a hold of you.</b> You're going to prison for " + prisonTime + " minutes👮🏻‍ ";
       } 
   }
 
   private breakOut(username: string, inmateUsername: string): string {
-    const prefix = "@" + username + " : ";
+    const prefix = this.prefixForUsername(username);
 
-    if(this.states[inmateUsername] == null) {
+    if(this.userOccupations[inmateUsername] == null) {
         return prefix + " " + inmateUsername + " is not in prison, silly 🤪";
     }
     let successful = Math.random() >= 0.5; 
 
     if (successful) {
-        delete this.states[inmateUsername];
+        delete this.userOccupations[inmateUsername];
         return prefix + " Broke out " + inmateUsername + "!";
     } else {
-        this.states[username] = { type: Occupations.prison };
+        this.userOccupations[username] = { type: Occupations.prison };
         const prisonTime = this.getRandomWaitingTime(10, 20);
         setTimeout(()=> {
-            delete this.states[username];
+            delete this.userOccupations[username];
         }, 60000 * prisonTime);
         return prefix + "<b> The breakout failed. </b> Now you're going to prison for " + prisonTime + " minutes 👮🏻‍ ";
     }
@@ -113,7 +109,7 @@ export class Plugin extends AbstractPlugin {
   }
 
   private listOfficeWorkers(): string {
-        const usernames = Object.keys(this.states).filter(p => this.states[p].type == Occupations.working);
+        const usernames = Object.keys(this.userOccupations).filter(p => this.userOccupations[p].type == Occupations.working);
         if (usernames.length == 0 ) {
             return "It's an empty day at the AFK office..";
         }
@@ -121,7 +117,7 @@ export class Plugin extends AbstractPlugin {
   }
 
   private listPrisonInmates(): string {
-    const usernames = Object.keys(this.states).filter(p => this.states[p].type == Occupations.prison);
+    const usernames = Object.keys(this.userOccupations).filter(p => this.userOccupations[p].type == Occupations.prison);
     if (usernames.length == 0 ) {
         return "AFK State Penitentiary is completely empty..";
     }
@@ -130,7 +126,7 @@ export class Plugin extends AbstractPlugin {
 
   private lifeRouter(chat: Chat, user: User, msg: any, match: string[]): string {
     const occupation = this.getOccupation(msg.from.username);
-    const prefix = "@" + msg.from.username + " : ";
+    const prefix = this.prefixForUsername(msg.from.username);
     const subCommand = this.getSubCommand(msg);
 
     switch(subCommand) {
@@ -165,7 +161,6 @@ export class Plugin extends AbstractPlugin {
             } else if (msg.reply_to_message.from.id === user.id) {
                 return "Breaking out yourself? Who are you? Michael Schofield? ✋";
             }
-
             return this.breakOut(msg.from.username, msg.reply_to_message.from.username);
         }
     }
