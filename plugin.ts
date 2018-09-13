@@ -19,7 +19,7 @@ enum Commands {
 
 export class Plugin extends AbstractPlugin {
 
-  private userOccupations: { [key:string] : {type: Occupations; }} = {}
+  private userOccupations: { [key:string] : {occupation: Occupation; }} = {}
 
   constructor() {
     super("Life", "1.0.0");
@@ -37,8 +37,8 @@ export class Plugin extends AbstractPlugin {
       return msg.text.split(" ")[1];
   } 
 
-  private getOccupation(username: string): Occupations {
-      return this.userOccupations[username] == null ? null : this.userOccupations[username].type;
+  private getOccupation(username: string): Occupation {
+      return this.userOccupations[username] == null ? null : this.userOccupations[username].occupation;
   }
 
   private getRandomWaitingTime(min: number, max: number): number {
@@ -51,7 +51,8 @@ export class Plugin extends AbstractPlugin {
 
   private startWorking(user: User, username: string): number {
     const waitingTime = this.getRandomWaitingTime(2, 10);
-    this.userOccupations[username] = { type: Occupations.working };
+    const endDate = new Date(Date.now() + (waitingTime * 60000));
+    this.userOccupations[username] = { occupation: new Occupation(Occupations.working, endDate) };
 
     setTimeout(()=> {
         delete this.userOccupations[username];
@@ -70,8 +71,9 @@ export class Plugin extends AbstractPlugin {
         user.addToScore(scoreToGain);
         return prefix + "You hustled and made  " + scoreToGain + " internet points 💰";
     } else {
-        this.userOccupations[username] = { type: Occupations.prison };
         const prisonTime = this.getRandomWaitingTime(10, 20);
+        const endDate = new Date(Date.now() + (prisonTime * 60000));
+        this.userOccupations[username] = { occupation: new Occupation(Occupations.prison, endDate) };
         setTimeout(()=> {
             delete this.userOccupations[username];
         }, 60000 * prisonTime);
@@ -91,8 +93,9 @@ export class Plugin extends AbstractPlugin {
         delete this.userOccupations[inmateUsername];
         return prefix + " Broke out " + inmateUsername + "!";
     } else {
-        this.userOccupations[username] = { type: Occupations.prison };
         const prisonTime = this.getRandomWaitingTime(10, 20);
+        const endDate = new Date(Date.now() + (prisonTime * 60000));
+        this.userOccupations[username] = { occupation: new Occupation(Occupations.prison, endDate) };
         setTimeout(()=> {
             delete this.userOccupations[username];
         }, 60000 * prisonTime);
@@ -100,16 +103,18 @@ export class Plugin extends AbstractPlugin {
     }
   }
 
-  private explainStatus(occupation: Occupations): string {
-    switch (occupation) {
-        case Occupations.working: return "You are currently working 🏢 ";
-        case Occupations.prison: return "You are currently locked up with an increasingly sexually frustrated cellmate 🔒 ";
+  private explainStatus(occupation: Occupation): string {
+    if (occupation) {
+        switch (occupation.occupationType) {
+            case Occupations.working: return ("You are currently working 🏢" + occupation.getTimeRemainingAsString());
+            case Occupations.prison: return ("You are currently locked up with an increasingly sexually frustrated cellmate 🔒" + occupation.getTimeRemainingAsString());
+        }
     }
     return "You are free to do as you like. Have some Freedom Fries (TM) 🍟 ";
   }
 
   private listOfficeWorkers(): string {
-        const usernames = Object.keys(this.userOccupations).filter(p => this.userOccupations[p].type == Occupations.working);
+        const usernames = Object.keys(this.userOccupations).filter(p => this.userOccupations[p].occupation.occupationType == Occupations.working);
         if (usernames.length == 0 ) {
             return "It's an empty day at the AFK office..";
         }
@@ -117,7 +122,7 @@ export class Plugin extends AbstractPlugin {
   }
 
   private listPrisonInmates(): string {
-    const usernames = Object.keys(this.userOccupations).filter(p => this.userOccupations[p].type == Occupations.prison);
+    const usernames = Object.keys(this.userOccupations).filter(p => this.userOccupations[p].occupation.occupationType == Occupations.prison);
     if (usernames.length == 0 ) {
         return "AFK State Penitentiary is completely empty..";
     }
@@ -141,10 +146,12 @@ export class Plugin extends AbstractPlugin {
         }
     }
 
-    if (occupation == Occupations.working) {
-        return prefix + "You are not done 'working' yet.";
-    } else if (occupation == Occupations.prison) {
-        return prefix + "You can't do anything while you're in prison."; 
+    if (occupation) {
+        if (occupation.occupationType == Occupations.working) {
+            return prefix + "You are not done 'working' yet." + occupation.getTimeRemainingAsString();
+        } else if (occupation.occupationType == Occupations.prison) {
+            return prefix + "You can't do anything while you're in prison." + occupation.getTimeRemainingAsString();
+        }
     }
     
     switch(subCommand) {
@@ -165,4 +172,24 @@ export class Plugin extends AbstractPlugin {
         }
     }
   }
+}
+
+export class Occupation {
+
+    constructor(public occupationType: Occupations,
+        private endTime: Date) { }
+
+    getTimeRemainingAsString(): string {
+        const timeRemaining = this.getTimeRemaining();
+        if (timeRemaining === 1) {
+            return " (" + this.getTimeRemaining() + " minute left)";
+        }
+        else {
+            return " (" + this.getTimeRemaining() + " minutes left)";
+        }
+    }
+
+    private getTimeRemaining(): number {
+        return Math.round((this.endTime.valueOf() - new Date().valueOf()) / 60000);
+    }
 }
