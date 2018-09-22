@@ -13,10 +13,10 @@ export abstract class Occupation {
     getTimeRemainingAsString(): string {
         const timeRemaining = this.getTimeRemaining();
         if (timeRemaining === 1) {
-            return " (" + this.getTimeRemaining() + " minute left)";
+            return "for " + this.getTimeRemaining() + " more minute.";
         }
         else {
-            return " (" + this.getTimeRemaining() + " minutes left)";
+            return "for " + this.getTimeRemaining() + " more minutes.";
         }
     }
 
@@ -46,11 +46,11 @@ export class WageSlaveOccupation extends Occupation {
     }
 
     getStatusMessage(): string {
-        return "You are currently working 🏢" + this.getTimeRemainingAsString();
+        return "You are currently working " + this.getTimeRemainingAsString() + " 🏢";
     }
 
     getBusyMessage(): string {
-        return "You are not done 'working' yet." + this.getTimeRemainingAsString();
+        return "You are working " + this.getTimeRemainingAsString();
     }
 }
 
@@ -65,10 +65,10 @@ export class CriminalOccupation extends Occupation {
     }
 
     getStatusMessage(): string {
-        return "You are currently locked up with an increasingly sexually frustrated cellmate 🔒" + this.getTimeRemainingAsString();
+        return "You are currently locked up with an increasingly sexually frustrated cellmate " + this.getTimeRemainingAsString() + " 🔒";
     }
 
     getBusyMessage(): string {
-        return "You can't do anything while you're in prison." + this.getTimeRemainingAsString();
+        return "You are in prison " + this.getTimeRemainingAsString();
     }
 }
