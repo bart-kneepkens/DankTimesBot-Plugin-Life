@@ -2,15 +2,19 @@ import { User } from "../../src/chat/user/user";
 
 export abstract class Occupation {
 
-    endTime: Date;
-    waitingTime: number;
+    public waitingTime: number;
+    private endTime: Date;
 
     constructor(minTime: number, maxTime: number) {
         this.waitingTime = this.getRandomWaitingTime(minTime, maxTime);
         this.endTime = new Date(Date.now() + (this.waitingTime * 60000));
     }
 
-    getTimeRemainingAsString(): string {
+    getTimeRemaining(): number {
+        return Math.round((this.endTime.valueOf() - new Date().valueOf()) / 60000);
+    }
+
+    protected getTimeRemainingAsString(): string {
         const timeRemaining = this.getTimeRemaining();
         if (timeRemaining === 1) {
             return "for " + this.getTimeRemaining() + " more minute.";
@@ -28,10 +32,6 @@ export abstract class Occupation {
 
     private getRandomWaitingTime(min: number, max: number): number {
       return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
-
-    private getTimeRemaining(): number {
-        return Math.round((this.endTime.valueOf() - new Date().valueOf()) / 60000);
     }
 }
 
