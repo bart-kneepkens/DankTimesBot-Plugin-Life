@@ -2,11 +2,7 @@ import { BotCommand } from "../../src/bot-commands/bot-command";
 import { Chat } from "../../src/chat/chat";
 import { User } from "../../src/chat/user/user";
 import { AbstractPlugin } from "../../src/plugin-host/plugin/plugin";
-
-enum Occupations {    
-    working,
-    prison,
-} 
+import { Occupation, WageSlaveOccupation, CriminalOccupation } from "./Occupation";
 
 enum Commands {
     status = "status",
@@ -19,7 +15,7 @@ enum Commands {
 
 export class Plugin extends AbstractPlugin {
 
-  private userOccupations: { [key:string] : {occupation: Occupation; }} = {}
+  private userOccupations: Occupation[] = [];
 
   constructor() {
     super("Life", "1.0.0");
@@ -42,42 +38,39 @@ export class Plugin extends AbstractPlugin {
   }
 
   private getRandomWaitingTime(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    return ;
   }
 
   private prefixForUsername(username: String) {
       return "@" + username + ": ";
   }
 
-  private startWorking(user: User, username: string): number {
-    const waitingTime = this.getRandomWaitingTime(2, 10);
-    const endDate = new Date(Date.now() + (waitingTime * 60000));
-    this.userOccupations[username] = { occupation: new Occupation(Occupations.working, endDate) };
+  private startWorking(user: User, username: string): string {
+    const occupation = new WageSlaveOccupation();
+    this.userOccupations[username] = { occupation: occupation };
 
     setTimeout(()=> {
         delete this.userOccupations[username];
-        user.addToScore(waitingTime * 15);
-    }, 60000 * waitingTime);
-    return waitingTime;
+        user.addToScore(occupation.waitingTime * 15);
+    }, 60000 * occupation.waitingTime);
+    return occupation.getStartMessage();
   }
 
   private commitCrime(user: User, username: string): string {
-    const waitingTime = this.getRandomWaitingTime(2, 5);
     const prefix = this.prefixForUsername(username);
 
     let successful = Math.random() >= 0.5;
     if (successful) {
-        const scoreToGain = waitingTime * 100;
+        const scoreToGain = this.getRandomWaitingTime(2, 5) * 100;
         user.addToScore(scoreToGain);
         return prefix + "You hustled and made  " + scoreToGain + " internet points 💰";
     } else {
-        const prisonTime = this.getRandomWaitingTime(10, 20);
-        const endDate = new Date(Date.now() + (prisonTime * 60000));
-        this.userOccupations[username] = { occupation: new Occupation(Occupations.prison, endDate) };
+        const occupation = new CriminalOccupation();
+        this.userOccupations[username] = { occupation: occupation };
         setTimeout(()=> {
             delete this.userOccupations[username];
-        }, 60000 * prisonTime);
-        return prefix + "<b>The police got a hold of you.</b> You're going to prison for " + prisonTime + " minutes👮🏻‍ ";
+        }, 60000 * occupation.waitingTime);
+        return prefix + occupation.getStartMessage();
       } 
   }
 
@@ -93,28 +86,24 @@ export class Plugin extends AbstractPlugin {
         delete this.userOccupations[inmateUsername];
         return prefix + " Broke out " + inmateUsername + "!";
     } else {
-        const prisonTime = this.getRandomWaitingTime(10, 20);
-        const endDate = new Date(Date.now() + (prisonTime * 60000));
-        this.userOccupations[username] = { occupation: new Occupation(Occupations.prison, endDate) };
+        const occupation = new CriminalOccupation();
+        this.userOccupations[username] = { occupation: occupation };
         setTimeout(()=> {
             delete this.userOccupations[username];
-        }, 60000 * prisonTime);
-        return prefix + "<b> The breakout failed. </b> Now you're going to prison for " + prisonTime + " minutes 👮🏻‍ ";
+        }, 60000 * occupation.waitingTime);
+        return prefix + "<b> The breakout failed. </b> Now you're going to prison for " + occupation.waitingTime + " minutes 👮🏻‍ ";
     }
   }
 
   private explainStatus(occupation: Occupation): string {
     if (occupation) {
-        switch (occupation.occupationType) {
-            case Occupations.working: return ("You are currently working 🏢" + occupation.getTimeRemainingAsString());
-            case Occupations.prison: return ("You are currently locked up with an increasingly sexually frustrated cellmate 🔒" + occupation.getTimeRemainingAsString());
-        }
+        return occupation.getStatusMessage();
     }
     return "You are free to do as you like. Have some Freedom Fries (TM) 🍟 ";
   }
 
   private listOfficeWorkers(): string {
-        const usernames = Object.keys(this.userOccupations).filter(p => this.userOccupations[p].occupation.occupationType == Occupations.working);
+        const usernames = Object.keys(this.userOccupations).filter(p => this.userOccupations[p].occupation instanceof WageSlaveOccupation);
         if (usernames.length == 0 ) {
             return "It's an empty day at the AFK office..";
         }
@@ -122,7 +111,7 @@ export class Plugin extends AbstractPlugin {
   }
 
   private listPrisonInmates(): string {
-    const usernames = Object.keys(this.userOccupations).filter(p => this.userOccupations[p].occupation.occupationType == Occupations.prison);
+    const usernames = Object.keys(this.userOccupations).filter(p => this.userOccupations[p].occupation instanceof WageSlaveOccupation);
     if (usernames.length == 0 ) {
         return "AFK State Penitentiary is completely empty..";
     }
@@ -147,17 +136,12 @@ export class Plugin extends AbstractPlugin {
     }
 
     if (occupation) {
-        if (occupation.occupationType == Occupations.working) {
-            return prefix + "You are not done 'working' yet." + occupation.getTimeRemainingAsString();
-        } else if (occupation.occupationType == Occupations.prison) {
-            return prefix + "You can't do anything while you're in prison." + occupation.getTimeRemainingAsString();
-        }
+        return prefix + occupation.getBusyMessage();
     }
     
     switch(subCommand) {
         case Commands.work: {
-            const minutesWorking = this.startWorking(user, msg.from.username);
-            return prefix + "You started working. You'll get paid in " + minutesWorking + " minutes. ";
+            return prefix + this.startWorking(user, msg.from.username);
         }
         case Commands.crime: {
             return this.commitCrime(user, msg.from.username);
@@ -172,24 +156,4 @@ export class Plugin extends AbstractPlugin {
         }
     }
   }
-}
-
-export class Occupation {
-
-    constructor(public occupationType: Occupations,
-        private endTime: Date) { }
-
-    getTimeRemainingAsString(): string {
-        const timeRemaining = this.getTimeRemaining();
-        if (timeRemaining === 1) {
-            return " (" + this.getTimeRemaining() + " minute left)";
-        }
-        else {
-            return " (" + this.getTimeRemaining() + " minutes left)";
-        }
-    }
-
-    private getTimeRemaining(): number {
-        return Math.round((this.endTime.valueOf() - new Date().valueOf()) / 60000);
-    }
 }
