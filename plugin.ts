@@ -68,7 +68,7 @@ export class Plugin extends AbstractPlugin {
     if (lifeUser.breakOut()) {
         return lifeUser.prefixForUsername() + inmate.isBrokenOut();
     } else {
-        lifeUser.prefixForUsername() + "<b> The breakout failed. </b> Now you're going to prison for " + lifeUser.occupation.waitingTime + " minutes 👮🏻‍ "
+        return lifeUser.prefixForUsername() + "<b> The breakout failed. </b> Now you're going to prison for " + lifeUser.occupation.waitingTime + " minutes 👮🏻‍ "
     }
   }
 
