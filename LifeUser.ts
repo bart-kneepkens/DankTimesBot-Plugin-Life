@@ -41,7 +41,7 @@ export class LifeUser {
       if (successful) {
           const scoreToGain = this.getRandomWaitingTime(2, 5) * 100;
           user.addToScore(scoreToGain);
-          return this.prefixForUsername() + "You hustled and made  " + scoreToGain + " internet points 💰";
+          return this.prefixForUsername() + "You hustled and made " + scoreToGain + " internet points 💰";
       } else {
           this.occupation = new CriminalOccupation();
           this.setTimerForOccupation(60000 * this.occupation.waitingTime);
