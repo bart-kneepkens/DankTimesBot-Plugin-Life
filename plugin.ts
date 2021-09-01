@@ -107,7 +107,7 @@ export class Plugin extends AbstractPlugin {
         inmate.occupation = null;
         return "👮🏻‍♂️ Your bribing attempt was successful. You are released from prison.";
     } else {
-        return "👮🏻‍♂️ Your bribing attempt was failed! You've lost your funds! 😭"
+        return `👮🏻‍♂️ Your bribing attempt has failed! You've lost ${amount} points! 😭`
     }
   }
 
