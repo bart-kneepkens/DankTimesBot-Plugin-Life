@@ -28,8 +28,14 @@ export class Plugin extends AbstractPlugin {
    * @override
    */
   public getPluginSpecificCommands(): BotCommand[] {
-    const lifeBaseCommand = new BotCommand("life", "control your virtual life. \n - /life work \n - /life hustle \n - /life breakout \n - /life office \n - /life prison", this.lifeRouter.bind(this));
-    return [lifeBaseCommand];
+    const statusCommand = new BotCommand("status", "show life status", this.lifeRouter.bind(this));
+    const workCommand = new BotCommand("work", "Make money the honest way", this.lifeRouter.bind(this));
+    const crimeCommand = new BotCommand("hustle", "Make money the not so honest way", this.lifeRouter.bind(this));
+    const breakoutCommand = new BotCommand("breakout", "Break a fellow player out of prison", this.lifeRouter.bind(this));
+    const officeCommand = new BotCommand("office", "List players that are currently working at the office", this.lifeRouter.bind(this));
+    const prisonCommand = new BotCommand("prison", "List players that are currently in prison", this.lifeRouter.bind(this));
+    const bribeCommand = new BotCommand("bribe", "Bribe a prison guard to let you out", this.lifeRouter.bind(this));
+    return [statusCommand, workCommand, crimeCommand, breakoutCommand, officeCommand, prisonCommand, bribeCommand];
   }
 
   private findOrCreateUser(username: string): LifeUser {
@@ -72,21 +78,20 @@ export class Plugin extends AbstractPlugin {
 
   private bribe = (user: User, msg: any): string => {
     const args = msg.text.split(" ");
-
     const inmate = this.findOrCreateUser(user.name);
 
     if(!(inmate.occupation instanceof CriminalOccupation)) {
         return inmate.prefixForUsername() + "you are not in prison, silly 🤪";
     }
 
-    if (args.length < 3) {
+    if (args.length < 2) {
         return 'Provide argument [amount] - the amount of points you\'re willing to use to bribe the prison guards';
     }
-    if (isNaN(args[2])) {
+    if (isNaN(args[1])) {
         return 'Provide a number please.';
     }
     
-    const amount = args[2];
+    const amount = args[1];
     const totalFunds = user.score;
 
     if (amount > totalFunds) {
@@ -94,7 +99,7 @@ export class Plugin extends AbstractPlugin {
     }
 
     const chance = (amount / totalFunds);
-    const succeeds = true;
+    const succeeds = Math.random() < (chance * 1.0337);
 
     user.addToScore(-amount);
 
@@ -108,9 +113,9 @@ export class Plugin extends AbstractPlugin {
 
   private lifeRouter(chat: Chat, user: User, msg: any, match: string[]): string {
     const senderUser = this.findOrCreateUser(msg.from.username);
-    const subCommand = msg.text.split(" ")[1];
+    const command = msg.text.substring(1).split(" ")[0];
 
-    switch(subCommand) {
+    switch(command) {
         case Commands.status: {
             return senderUser.explainStatus();
         }
@@ -129,7 +134,7 @@ export class Plugin extends AbstractPlugin {
         return senderUser.getBusyMessage();
     }
     
-    switch(subCommand) {
+    switch(command) {
         case Commands.work: {
             return senderUser.startWorking(user);
         }
@@ -138,9 +143,9 @@ export class Plugin extends AbstractPlugin {
         }
         case Commands.breakout: {
             if (msg.reply_to_message == null || msg.reply_to_message.from == null) {
-                return "To break someone out, reply to their message with <code>/life breakout</code> ✋";
+                return "To break someone out, reply to their message with <code>/breakout</code> ✋";
             } else if (msg.reply_to_message.from.id === user.id) {
-                return "Breaking out yourself? Who are you? Michael Schofield? ✋";
+                return "Breaking out yourself? ✋";
             }
             return this.breakOut(senderUser, msg.reply_to_message.from.username, user);
         }
