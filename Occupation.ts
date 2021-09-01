@@ -65,7 +65,7 @@ export class CriminalOccupation extends Occupation {
     }
 
     getStatusMessage(): string {
-        return "You are currently locked up with an increasingly sexually frustrated cellmate " + this.getTimeRemainingAsString() + " 🔒";
+        return "You are currently locked up with an increasingly angry cellmate " + this.getTimeRemainingAsString() + " 🔒";
     }
 
     getBusyMessage(): string {

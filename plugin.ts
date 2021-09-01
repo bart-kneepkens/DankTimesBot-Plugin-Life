@@ -13,6 +13,7 @@ export enum Commands {
     breakout = "breakout",
     office = "office",
     prison = "prison",
+    bribe = "bribe",
 }
 
 export class Plugin extends AbstractPlugin {
@@ -29,10 +30,6 @@ export class Plugin extends AbstractPlugin {
   public getPluginSpecificCommands(): BotCommand[] {
     const lifeBaseCommand = new BotCommand("life", "control your virtual life. \n - /life work \n - /life hustle \n - /life breakout \n - /life office \n - /life prison", this.lifeRouter.bind(this));
     return [lifeBaseCommand];
-  }
-
-  private getSubCommand(msg: any): string {
-      return msg.text.split(" ")[1];
   }
 
   private findOrCreateUser(username: string): LifeUser {
@@ -59,26 +56,63 @@ export class Plugin extends AbstractPlugin {
     return "🔒 <b> Inmates at the AFK State Penitentiary </b> 🔒  \n-\t" + entries.join("\n-\t");
   }
   
-  private breakOut(lifeUser: LifeUser, inmateUsername: string): string {
+  private breakOut(lifeUser: LifeUser, inmateUsername: string, botUser: User): string {
     const inmate = this.findOrCreateUser(inmateUsername);
+
     if(!(inmate.occupation instanceof CriminalOccupation)) {
         return lifeUser.prefixForUsername() + " " + inmateUsername + " is not in prison, silly 🤪";
     }
     
-    if (lifeUser.breakOut()) {
-        return lifeUser.prefixForUsername() + inmate.isBrokenOut();
+    if (lifeUser.breakOut(botUser)) {
+        return lifeUser.prefixForUsername() + inmate.isBrokenOut() + " Here's a reward!"
     } else {
         return lifeUser.prefixForUsername() + "<b> The breakout failed. </b> Now you're going to prison for " + lifeUser.occupation.waitingTime + " minutes 👮🏻‍ "
     }
   }
 
+  private bribe = (user: User, msg: any): string => {
+    const args = msg.text.split(" ");
+
+    const inmate = this.findOrCreateUser(user.name);
+
+    if(!(inmate.occupation instanceof CriminalOccupation)) {
+        return inmate.prefixForUsername() + "you are not in prison, silly 🤪";
+    }
+
+    if (args.length < 3) {
+        return 'Provide argument [amount] - the amount of points you\'re willing to use to bribe the prison guards';
+    }
+    if (isNaN(args[2])) {
+        return 'Provide a number please.';
+    }
+    
+    const amount = args[2];
+    const totalFunds = user.score;
+
+    if (amount > totalFunds) {
+        return 'You can\'t spend more than you have on bribing.'
+    }
+
+    const chance = (amount / totalFunds);
+    const succeeds = true;
+
+    user.addToScore(-amount);
+
+    if (succeeds) {
+        inmate.occupation = null;
+        return "👮🏻‍♂️ Your bribing attempt was successful. You are released from prison.";
+    } else {
+        return "👮🏻‍♂️ Your bribing attempt was failed! You've lost your funds! 😭"
+    }
+  }
+
   private lifeRouter(chat: Chat, user: User, msg: any, match: string[]): string {
-    const lifeUser = this.findOrCreateUser(msg.from.username);
-    const subCommand = this.getSubCommand(msg);
+    const senderUser = this.findOrCreateUser(msg.from.username);
+    const subCommand = msg.text.split(" ")[1];
 
     switch(subCommand) {
         case Commands.status: {
-            return lifeUser.explainStatus();
+            return senderUser.explainStatus();
         }
         case Commands.office: {
             return this.listOfficeWorkers();
@@ -86,18 +120,21 @@ export class Plugin extends AbstractPlugin {
         case Commands.prison: {
             return this.listPrisonInmates();
         }
+        case Commands.bribe: {
+            return this.bribe(user, msg);
+        }
     }
 
-    if (lifeUser.occupation) {
-        return lifeUser.getBusyMessage();
+    if (senderUser.occupation) {
+        return senderUser.getBusyMessage();
     }
     
     switch(subCommand) {
         case Commands.work: {
-            return lifeUser.startWorking(user);
+            return senderUser.startWorking(user);
         }
         case Commands.crime: {
-            return lifeUser.commitCrime(user);
+            return senderUser.commitCrime(user);
         }
         case Commands.breakout: {
             if (msg.reply_to_message == null || msg.reply_to_message.from == null) {
@@ -105,7 +142,7 @@ export class Plugin extends AbstractPlugin {
             } else if (msg.reply_to_message.from.id === user.id) {
                 return "Breaking out yourself? Who are you? Michael Schofield? ✋";
             }
-            return this.breakOut(lifeUser, msg.reply_to_message.from.username);
+            return this.breakOut(senderUser, msg.reply_to_message.from.username, user);
         }
     }
   }
