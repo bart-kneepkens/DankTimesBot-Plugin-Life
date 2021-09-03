@@ -99,7 +99,7 @@ export class Plugin extends AbstractPlugin {
     }
 
     const chance = (amount / totalFunds);
-    const succeeds = Math.random() < (chance * 1.0337);
+    const succeeds = Math.random() < (chance * 4.2);
 
     user.addToScore(-amount);
 
