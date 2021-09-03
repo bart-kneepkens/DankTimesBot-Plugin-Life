@@ -1,5 +1,3 @@
-import { User } from "../../src/chat/user/user";
-
 export abstract class Occupation {
 
     public waitingTime: number;

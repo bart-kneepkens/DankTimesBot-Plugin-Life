@@ -1,5 +1,4 @@
 import { Occupation, WageSlaveOccupation, CriminalOccupation } from "./Occupation";
-import { Commands } from "./plugin";
 import { User } from "../../src/chat/user/user";
 
 export class LifeUser {
