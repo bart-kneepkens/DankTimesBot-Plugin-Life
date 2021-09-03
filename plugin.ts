@@ -2,9 +2,8 @@ import { BotCommand } from "../../src/bot-commands/bot-command";
 import { Chat } from "../../src/chat/chat";
 import { User } from "../../src/chat/user/user";
 import { AbstractPlugin } from "../../src/plugin-host/plugin/plugin";
-import { Occupation, WageSlaveOccupation, CriminalOccupation } from "./Occupation";
+import { WageSlaveOccupation, CriminalOccupation } from "./Occupation";
 import { LifeUser } from "./LifeUser";
-import { UserScoreChangedPluginEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/user-score-changed-plugin-event-arguments";
 
 export enum Commands {
     status = "status",
@@ -28,14 +27,15 @@ export class Plugin extends AbstractPlugin {
    * @override
    */
   public getPluginSpecificCommands(): BotCommand[] {
-    const statusCommand = new BotCommand("status", "show life status", this.lifeRouter.bind(this));
-    const workCommand = new BotCommand("work", "Make money the honest way", this.lifeRouter.bind(this));
-    const crimeCommand = new BotCommand("hustle", "Make money the not so honest way", this.lifeRouter.bind(this));
-    const breakoutCommand = new BotCommand("breakout", "Break a fellow player out of prison", this.lifeRouter.bind(this));
-    const officeCommand = new BotCommand("office", "List players that are currently working at the office", this.lifeRouter.bind(this));
-    const prisonCommand = new BotCommand("prison", "List players that are currently in prison", this.lifeRouter.bind(this));
-    const bribeCommand = new BotCommand("bribe", "Bribe a prison guard to let you out", this.lifeRouter.bind(this));
-    return [statusCommand, workCommand, crimeCommand, breakoutCommand, officeCommand, prisonCommand, bribeCommand];
+    const lifeCommand = new BotCommand("life", "Display info about the Life plugin", this.displayPluginInfo, true);
+    const statusCommand = new BotCommand("status", "", this.lifeRouter.bind(this), false);
+    const workCommand = new BotCommand("work", "", this.lifeRouter.bind(this), false);
+    const crimeCommand = new BotCommand("hustle", "", this.lifeRouter.bind(this), false);
+    const breakoutCommand = new BotCommand("breakout", "", this.lifeRouter.bind(this), false);
+    const officeCommand = new BotCommand("office", "", this.lifeRouter.bind(this), false);
+    const prisonCommand = new BotCommand("prison", "", this.lifeRouter.bind(this), false);
+    const bribeCommand = new BotCommand("bribe", "", this.lifeRouter.bind(this), false);
+    return [lifeCommand, statusCommand, workCommand, crimeCommand, breakoutCommand, officeCommand, prisonCommand, bribeCommand];
   }
 
   private findOrCreateUser(username: string): LifeUser {
@@ -109,6 +109,17 @@ export class Plugin extends AbstractPlugin {
     } else {
         return `👮🏻‍♂️ Your bribing attempt has failed! You've lost ${amount} points! 😭`
     }
+  }
+
+  private displayPluginInfo = (): string => {
+      return "🍋 Life - Choose your destiny 🍋 \n\n"
+      + `/${Commands.status} - To see how life is looking for you\n`
+      + `/${Commands.work} - To earn money the safe (and boring) way\n`
+      + `/${Commands.crime} - To earn money the gangster way - you may end up in prison!\n\n` 
+      + `/${Commands.prison} - See who's locked up in prison\n`
+      + `/${Commands.office} - See who's in the office\n\n`
+      + `/${Commands.breakout} - Reply this to a prison inmate to attempt to break them out\n`
+      + `/${Commands.bribe} - Attempt to buy your way to freedom - provide an amount of money you're willing to spend!\n`;
   }
 
   private lifeRouter(chat: Chat, user: User, msg: any, match: string[]): string {
