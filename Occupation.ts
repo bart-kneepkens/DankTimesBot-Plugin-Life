@@ -1,4 +1,5 @@
-import { Minutes } from "./plugin";
+import { Strings } from "./Strings";
+import { Random } from "./Random";
 
 export abstract class Occupation {
 
@@ -6,30 +7,24 @@ export abstract class Occupation {
     private endTime: Date;
 
     constructor(minTime: number, maxTime: number) {
-        this.waitingTime = this.getRandomWaitingTime(minTime, maxTime);
+        this.waitingTime = Random.number(minTime, maxTime);
         this.endTime = new Date(Date.now() + (this.waitingTime * 60000));
     }
 
-    getRemainingTimeMinutes(): number {
+    get remainingTimeMinutes(): number {
         return Math.round((this.endTime.valueOf() - new Date().valueOf()) / 60000);
     }
 
-    protected getTimeRemainingAsString(): string {
-        const timeRemaining = this.getRemainingTimeMinutes();
-        const minutes = new Minutes(timeRemaining);
+    protected get timeRemainingAsString(): string {
+        const timeRemaining = this.remainingTimeMinutes;
+        const minutes = Strings.minutes(timeRemaining);
 
-        return `with ${minutes.stringValue} to go`;
+        return `with ${minutes} to go`;
     }
 
-    abstract getStartMessage(): string;
+    abstract get startMessage(): string;
 
-    abstract getStatusMessage(): string;
-    
-    abstract getBusyMessage(): string;
-
-    private getRandomWaitingTime(min: number, max: number): number {
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
+    abstract get statusMessage(): string;
 }
 
 export class WageSlaveOccupation extends Occupation {
@@ -38,17 +33,12 @@ export class WageSlaveOccupation extends Occupation {
         super(2, 10);
     }
 
-    getStartMessage(): string {
-        const minutes = new Minutes(this.waitingTime);
-        return `You started working. You'll get paid in ${minutes.stringValue}`;
+    get startMessage(): string {
+        return Strings.startedWorking(this.remainingTimeMinutes);
     }
 
-    getStatusMessage(): string {
-        return "You are currently working " + this.getTimeRemainingAsString() + " 🏢";
-    }
-
-    getBusyMessage(): string {
-        return "You are working " + this.getTimeRemainingAsString();
+    get statusMessage(): string {
+        return `${Strings.currentlyWorking} ${this.timeRemainingAsString} 🏢`;
     }
 }
 
@@ -58,16 +48,11 @@ export class CriminalOccupation extends Occupation {
         super(10, 20);
     }
 
-    getStartMessage(): string {
-        const minutes = new Minutes(this.waitingTime);
-        return `<b>The police got a hold of you.</b> You're going to prison for ${minutes.stringValue} 👮🏻‍♂️`;
+    get startMessage(): string {
+        return Strings.thrownInJail(this.remainingTimeMinutes);
     }
 
-    getStatusMessage(): string {
-        return "You are currently locked up with an increasingly angry cellmate " + this.getTimeRemainingAsString() + " 🔒";
-    }
-
-    getBusyMessage(): string {
-        return "You are in prison " + this.getTimeRemainingAsString();
+    get statusMessage(): string {
+        return `${Strings.currentlyIncarcerated} ${this.timeRemainingAsString } 🔒`;
     }
 }

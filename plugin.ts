@@ -4,6 +4,11 @@ import { User } from "../../src/chat/user/user";
 import { AbstractPlugin } from "../../src/plugin-host/plugin/plugin";
 import { WageSlaveOccupation, CriminalOccupation } from "./Occupation";
 import { LifeUser } from "./LifeUser";
+import { AlterUserScoreArgs } from "../../src/chat/alter-user-score-args";
+import { Strings } from './Strings';
+import { Random } from "./Random";
+
+const PLUGIN_NAME = "Life";
 
 export enum Commands {
     status = "status",
@@ -15,61 +20,76 @@ export enum Commands {
     bribe = "bribe",
 }
 
+export enum ScoreChangeReason {
+    crimeCommited = `crimeCommitted`,
+    workCompleted = `workCompleted`,
+    bribe = `bribe`,
+    breakoutSucceeded = `breakoutSucceeded`
+}
+
 export class Plugin extends AbstractPlugin {
 
   private lifeUsers: LifeUser[] = [];
 
   constructor() {
-    super("Life", "1.0.0");
+    super(PLUGIN_NAME, "1.1.0");
   }
 
+  /// Override
   public getPluginSpecificCommands(): BotCommand[] {
-    const lifeCommand = new BotCommand("life", "Display info about the Life plugin", this.displayPluginInfo, true);
+    const lifeCommand = new BotCommand("life", `Display info about the ${PLUGIN_NAME} plugin`, this.displayPluginInfo, true);
     const statusCommand = new BotCommand("status", "", this.displayStatus, false);
-    const workCommand = new BotCommand("work", "", this.lifeRouter.bind(this), false);
-    const crimeCommand = new BotCommand("hustle", "", this.lifeRouter.bind(this), false);
-    const breakoutCommand = new BotCommand("breakout", "", this.lifeRouter.bind(this), false);
+    const workCommand = new BotCommand("work", "", this.work, false);
+    const crimeCommand = new BotCommand("hustle", "", this.hustle, false);
+    const breakoutCommand = new BotCommand("breakout", "", this.breakOut, false);
     const officeCommand = new BotCommand("office", "", this.describeOffice, false);
     const prisonCommand = new BotCommand("prison", "", this.describePrison, false);
     const bribeCommand = new BotCommand("bribe", "", this.bribe, false);
     return [lifeCommand, statusCommand, workCommand, crimeCommand, breakoutCommand, officeCommand, prisonCommand, bribeCommand];
   }
 
-  private findOrCreateUser(username: string): LifeUser {
-    let user = this.lifeUsers.find(u => u.username === username);
-    if (!user) {
-        this.lifeUsers.push(user = new LifeUser(username));
-    }
-    return user;
-  }
+  /// Commands
 
   private describeOffice = (): string => {
-        const entries = this.lifeUsers.filter(u => u.occupation instanceof WageSlaveOccupation).map(u => u.getBuildingEntry());
-        if (entries.length == 0 ) {
-            return "It's an empty day at the AFK office..";
-        }
-        return "🏢 <b> People slaving at the AFK office </b> 🏢  \n-\t" + entries.join("\n-\t");
+    const entries = this.lifeUsers.filter(u => u.occupation instanceof WageSlaveOccupation).map(u => u.buildingEntry);
+    if (entries.length == 0) {
+        return Strings.officeEmpty;
+    }
+    return `${Strings.workingAtTheOffice}\n-\t` + entries.join("\n-\t");
   }
 
   private describePrison = (): string => {
-    const entries = this.lifeUsers.filter(u => u.occupation instanceof CriminalOccupation).map(u => u.getBuildingEntry());
-    if (entries.length == 0 ) {
-        return "AFK State Penitentiary is completely empty..";
+    const entries = this.lifeUsers.filter(u => u.occupation instanceof CriminalOccupation).map(u => u.buildingEntry);
+    if (entries.length == 0) {
+        return Strings.prisonEmpty;
     }
-    return "🔒 <b> Inmates at the AFK State Penitentiary </b> 🔒  \n-\t" + entries.join("\n-\t");
+    return `${Strings.currentlyInPrison}\n-\t` + entries.join("\n-\t");
   }
   
-  private breakOut(lifeUser: LifeUser, inmateUsername: string, botUser: User): string {
-    const inmate = this.findOrCreateUser(inmateUsername);
+  private breakOut = (chat: Chat, user: User, msg: any, match: string[]): string => {
+    const lifeUser = this.findOrCreateUser(user.name);
+
+    if (msg.reply_to_message == null || msg.reply_to_message.from == null) {
+        return Strings.breakoutInstructions;
+    } else if (msg.reply_to_message.from.id === user.id) {
+        return Strings.breakoutYourself;
+    }
+
+    const inmate = this.findOrCreateUser(msg.reply_to_message);
 
     if(!(inmate.occupation instanceof CriminalOccupation)) {
-        return lifeUser.prefixForUsername() + " " + inmateUsername + " is not in prison, silly 🤪";
+        return `${lifeUser.mentionedUserName} ${Strings.isNotInPrison(inmate.username)}`;
     }
     
-    if (lifeUser.breakOut(botUser)) {
-        return lifeUser.prefixForUsername() + inmate.isBrokenOut() + " Here's a reward!"
+    let successful = Math.random() >= 0.35;
+
+    if (successful) {
+        inmate.clearOccupation();
+        chat.alterUserScore(new AlterUserScoreArgs(user, 100, PLUGIN_NAME, ScoreChangeReason.breakoutSucceeded));
+        return `${lifeUser.mentionedUserName} ${Strings.didBreakOutInmate(inmate.username)}`;
     } else {
-        return lifeUser.prefixForUsername() + "<b> The breakout failed. </b> Now you're going to prison for " + lifeUser.occupation.waitingTime + " minutes 👮🏻‍ "
+        lifeUser.incarcerate();
+        return `${lifeUser.mentionedUserName} ${Strings.breakoutFailed(lifeUser.occupation.waitingTime)}`
     }
   }
 
@@ -78,108 +98,74 @@ export class Plugin extends AbstractPlugin {
     const inmate = this.findOrCreateUser(user.name);
 
     if(!(inmate.occupation instanceof CriminalOccupation)) {
-        return inmate.prefixForUsername() + "you are not in prison, silly 🤪";
+        return `${inmate.mentionedUserName} ${Strings.youAreNotInPrison}`;
     }
 
     if (args.length < 2) {
-        return 'Provide argument [amount] - the amount of points you\'re willing to use to bribe the prison guards';
+        return Strings.bribeInstruction;
     }
     if (isNaN(args[1]) || args[1] < 0) {
-        return 'Provide a valid, positive number please.';
+        return Strings.provideValidPositiveNumber;
     }
     
     const amount = args[1];
     const totalFunds = user.score;
 
     if (amount > totalFunds) {
-        return 'You can\'t spend more than you have on bribing.'
+        return Strings.cantSpendMoreThanYouHave;
     }
 
     const chance = (amount / totalFunds);
     const succeeds = Math.random() < (chance * 4.2);
 
-    user.addToScore(-amount);
+    chat.alterUserScore(new AlterUserScoreArgs(user, -amount, PLUGIN_NAME, ScoreChangeReason.bribe));
 
     if (succeeds) {
-        inmate.occupation = null;
-        return "👮🏻‍♂️ Your bribing attempt was successful. You are released from prison.";
+        inmate.clearOccupation();
+        return Strings.bribingSuccessful;
     } else {
-        const points = new Points(amount);
-        return `👮🏻‍♂️ Your bribing attempt has failed! You've lost ${points.stringValue}! 😭`
+        return Strings.bribingFailed(amount); 
     }
   }
 
   private displayPluginInfo = (): string => {
-      return "🍋 Life - Choose your destiny 🍋 \n\n"
-      + `/${Commands.status} - To see how life is looking for you\n`
-      + `/${Commands.work} - To earn money the safe (and boring) way\n`
-      + `/${Commands.crime} - To earn money the gangster way - you may end up in prison!\n\n` 
-      + `/${Commands.prison} - See who's locked up in prison\n`
-      + `/${Commands.office} - See who's in the office\n\n`
-      + `/${Commands.breakout} - Reply this to a prison inmate to attempt to break them out\n`
-      + `/${Commands.bribe} - Attempt to buy your way to freedom - provide an amount of money you're willing to spend!\n`;
+    return Strings.pluginInfo;
   }
 
   private displayStatus = (chat: Chat, user: User): string => {
-      return this.findOrCreateUser(user.name).explainStatus();
+    return this.findOrCreateUser(user.name).status;
   }
 
+  private hustle = (chat: Chat, user: User): string => {
+    const lifeUser = this.findOrCreateUser(user.name);
 
-  private lifeRouter(chat: Chat, user: User, msg: any, match: string[]): string {
-    const senderUser = this.findOrCreateUser(msg.from.username);
-    const command = msg.text.substring(1).split(" ")[0].split("@")[0];
+    const successful = Math.random() >= 0.5;
 
-    if (senderUser.occupation) {
-        return senderUser.getBusyMessage();
-    }
-    
-    switch(command) {
-        case Commands.work: {
-            return senderUser.startWorking(user);
-        }
-        case Commands.crime: {
-            return senderUser.commitCrime(user);
-        }
-        case Commands.breakout: {
-            if (msg.reply_to_message == null || msg.reply_to_message.from == null) {
-                return "To break someone out, reply to their message with <code>/breakout</code> ✋";
-            } else if (msg.reply_to_message.from.id === user.id) {
-                return "Breaking out yourself? ✋";
-            }
-            return this.breakOut(senderUser, msg.reply_to_message.from.username, user);
-        }
+    if (successful) {
+        const scoreToGain = Random.number(60, 700);
+        chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, PLUGIN_NAME, ScoreChangeReason.crimeCommited));
+        return `${lifeUser.mentionedUserName} ${Strings.hustleSuccessful(scoreToGain)}`;
+    } else {
+        lifeUser.incarcerate();
+        return lifeUser.mentionedUserName + lifeUser.occupation.startMessage;
     }
   }
-}
+  
+  private work = (chat: Chat, user: User): string => {
+    const lifeUser = this.findOrCreateUser(user.name);
+    lifeUser.startWork(() => {
+        chat.alterUserScore(new AlterUserScoreArgs(user, lifeUser.occupation.waitingTime * 20, PLUGIN_NAME, ScoreChangeReason.workCompleted));
+    })
+    return lifeUser.mentionedUserName + lifeUser.occupation.startMessage;
+  }
 
-export class Minutes {
-    private value: number;
+  /// Helpers
 
-    constructor(minutes: number) {
-        this.value = minutes;
+  private findOrCreateUser(username: string): LifeUser {
+    let user = this.lifeUsers.find(u => u.username === username);
+    if (!user) {
+        this.lifeUsers.push(user = new LifeUser(username));
     }
-
-    public get stringValue(): string {
-        if (this.value < 1) {
-            return `less than a minute`
-        } else if (Math.abs(this.value) == 1) {
-            return `${this.value} minute`;
-        } 
-        return `${this.value} minutes`
-    }
-}
-
-export class Points {
-    private value: number;
-
-    constructor(points: number) {
-        this.value = points;
-    }
-
-    public get stringValue(): string {
-        if (Math.abs(this.value) == 1) {
-            return `${this.value} point`;
-        }
-        return `${this.value} points`
-    }
+    return user;
+  }
 }

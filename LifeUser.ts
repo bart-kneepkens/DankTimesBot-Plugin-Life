@@ -1,6 +1,5 @@
 import { Occupation, WageSlaveOccupation, CriminalOccupation } from "./Occupation";
-import { User } from "../../src/chat/user/user";
-import { Minutes, Points } from "./plugin";
+import { Strings } from "./Strings";
 
 export class LifeUser {
 
@@ -8,77 +7,43 @@ export class LifeUser {
 
     constructor(public username: string) { }
 
-    getBuildingEntry = (): string => {
+    get mentionedUserName(): string {
+        return "@" + this.username + ":";
+    }
+
+    get buildingEntry(): string {
         if (this.occupation) {
-            const minutes = new Minutes(this.occupation.getRemainingTimeMinutes());
-            return `${this.username} (${minutes.stringValue})`;
+            const minutes = Strings.minutes(this.occupation.remainingTimeMinutes);
+            return `${this.username} (${minutes})`;
         }
         return "";
     }
 
-    prefixForUsername = () => {
-        return "@" + this.username + ": ";
-    }
-
-    explainStatus = (): string => {
+    get status(): string {
         if (this.occupation) {
-            return this.prefixForUsername() + this.occupation.getStatusMessage();
+            return `${this.mentionedUserName} ${this.occupation.statusMessage}`;
         }
-        return "You are free to do as you like. Have some Freedom Fries (TM) 🍟 ";
+        return Strings.youAreFree;
     }
 
-    getBusyMessage = (): string => {
-        return this.prefixForUsername() + this.occupation.getBusyMessage();
-    }
-
-    startWorking = (user: User): string => {
+    startWork = (completion: (() => void)) => {
         this.occupation = new WageSlaveOccupation();
-        this.setTimerForOccupation(60000 * this.occupation.waitingTime, user, this.occupation.waitingTime * 15);
-        return this.prefixForUsername() + this.occupation.getStartMessage();
+        this.setTimerForOccupation(60000 * this.occupation.waitingTime, completion);
     }
 
-    commitCrime = (user: User): string => {
-        let successful = Math.random() >= 0.5;
-        if (successful) {
-            const scoreToGain = this.randomNumber(1, 5) * this.randomNumber(60, 140);
-            user.addToScore(scoreToGain);
-            const points = new Points(scoreToGain);
-            return this.prefixForUsername() + `You hustled and made ${points.stringValue} 💰`;
-        } else {
-            this.occupation = new CriminalOccupation();
-            this.setTimerForOccupation(60000 * this.occupation.waitingTime);
-            return this.prefixForUsername() + this.occupation.getStartMessage();
-        }
+    incarcerate = () => {
+        this.occupation = new CriminalOccupation();
+        this.setTimerForOccupation(60000 * this.occupation.waitingTime);
     }
 
-    breakOut = (botUser: User): boolean => {
-        let successful = Math.random() >= 0.35;
-
-        if (successful) {
-            botUser.addToScore(100);
-            return true;
-        } else {
-            this.occupation = new CriminalOccupation();
-            this.setTimerForOccupation(60000 * this.occupation.waitingTime);
-            return false;
-        }
-    }
-
-    isBrokenOut(): string {
+    clearOccupation = () => {
         this.occupation = null;
-        return "Broke out " + this.username + "!";
     }
 
-    private setTimerForOccupation(waitingTime: number, user?: User, reward?: number) {
+    private setTimerForOccupation(waitingTime: number, completion?: (() => void)) {
         setTimeout(() => {
-            if (user && reward) {
-                user.addToScore(reward);
-            }
-            this.occupation = null;
+            completion && completion();
+            this.clearOccupation();
         }, waitingTime);
-    }
-
-    private randomNumber(min: number, max: number): number {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 }
