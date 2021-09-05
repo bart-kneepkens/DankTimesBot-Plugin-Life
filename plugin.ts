@@ -104,7 +104,8 @@ export class Plugin extends AbstractPlugin {
         inmate.occupation = null;
         return "👮🏻‍♂️ Your bribing attempt was successful. You are released from prison.";
     } else {
-        return `👮🏻‍♂️ Your bribing attempt has failed! You've lost ${amount} points! 😭`
+        const points = new Points(amount);
+        return `👮🏻‍♂️ Your bribing attempt has failed! You've lost ${points.stringValue}! 😭`
     }
   }
 
@@ -149,4 +150,36 @@ export class Plugin extends AbstractPlugin {
         }
     }
   }
+}
+
+export class Minutes {
+    private value: number;
+
+    constructor(minutes: number) {
+        this.value = minutes;
+    }
+
+    public get stringValue(): string {
+        if (this.value < 1) {
+            return `less than a minute`
+        } else if (Math.abs(this.value) == 1) {
+            return `${this.value} minute`;
+        } 
+        return `${this.value} minutes`
+    }
+}
+
+export class Points {
+    private value: number;
+
+    constructor(points: number) {
+        this.value = points;
+    }
+
+    public get stringValue(): string {
+        if (Math.abs(this.value) == 1) {
+            return `${this.value} point`;
+        }
+        return `${this.value} points`
+    }
 }

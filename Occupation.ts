@@ -1,3 +1,5 @@
+import { Minutes } from "./plugin";
+
 export abstract class Occupation {
 
     public waitingTime: number;
@@ -14,13 +16,9 @@ export abstract class Occupation {
 
     protected getTimeRemainingAsString(): string {
         const timeRemaining = this.getRemainingTimeMinutes();
-        if (timeRemaining == 0) {
-            return "with less than a minute to go"
-        } else if (timeRemaining === 1) {
-            return "for " + this.getRemainingTimeMinutes() + " more minute.";
-        } else {
-            return "for " + this.getRemainingTimeMinutes() + " more minutes.";
-        }
+        const minutes = new Minutes(timeRemaining);
+
+        return `with ${minutes.stringValue} to go`;
     }
 
     abstract getStartMessage(): string;
@@ -41,7 +39,8 @@ export class WageSlaveOccupation extends Occupation {
     }
 
     getStartMessage(): string {
-        return "You started working. You'll get paid in " + this.waitingTime + " minutes. ";
+        const minutes = new Minutes(this.waitingTime);
+        return `You started working. You'll get paid in ${minutes.stringValue}`;
     }
 
     getStatusMessage(): string {
@@ -60,7 +59,8 @@ export class CriminalOccupation extends Occupation {
     }
 
     getStartMessage(): string {
-        return "<b>The police got a hold of you.</b> You're going to prison for " + this.waitingTime + " minutes👮🏻‍ ";
+        const minutes = new Minutes(this.waitingTime);
+        return `<b>The police got a hold of you.</b> You're going to prison for ${minutes.stringValue} 👮🏻‍♂️`;
     }
 
     getStatusMessage(): string {

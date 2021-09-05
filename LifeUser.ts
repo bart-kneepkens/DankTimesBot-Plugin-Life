@@ -1,5 +1,6 @@
 import { Occupation, WageSlaveOccupation, CriminalOccupation } from "./Occupation";
 import { User } from "../../src/chat/user/user";
+import { Minutes, Points } from "./plugin";
 
 export class LifeUser {
 
@@ -9,7 +10,8 @@ export class LifeUser {
 
     getBuildingEntry = (): string => {
         if (this.occupation) {
-            return this.username + " (" + this.occupation.getRemainingTimeMinutes() + " min)";
+            const minutes = new Minutes(this.occupation.getRemainingTimeMinutes());
+            return `${this.username} (${minutes.stringValue})`;
         }
         return "";
     }
@@ -40,7 +42,8 @@ export class LifeUser {
         if (successful) {
             const scoreToGain = this.randomNumber(1, 5) * this.randomNumber(60, 140);
             user.addToScore(scoreToGain);
-            return this.prefixForUsername() + "You hustled and made " + scoreToGain + " internet points 💰";
+            const points = new Points(scoreToGain);
+            return this.prefixForUsername() + `You hustled and made ${points.stringValue} 💰`;
         } else {
             this.occupation = new CriminalOccupation();
             this.setTimerForOccupation(60000 * this.occupation.waitingTime);
