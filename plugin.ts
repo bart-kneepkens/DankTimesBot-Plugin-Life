@@ -84,7 +84,7 @@ export class Plugin extends AbstractPlugin {
     if (args.length < 2) {
         return 'Provide argument [amount] - the amount of points you\'re willing to use to bribe the prison guards';
     }
-    if (isNaN(args[1]), args[1] > 0) {
+    if (isNaN(args[1]) || args[1] < 0) {
         return 'Provide a valid, positive number please.';
     }
     
