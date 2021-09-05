@@ -69,13 +69,17 @@ export class Plugin extends AbstractPlugin {
   private breakOut = (chat: Chat, user: User, msg: any, match: string[]): string => {
     const lifeUser = this.findOrCreateUser(user.name);
 
+    if (lifeUser.occupation) {
+        return lifeUser.occupation.statusMessage;
+    }
+
     if (msg.reply_to_message == null || msg.reply_to_message.from == null) {
         return Strings.breakoutInstructions;
     } else if (msg.reply_to_message.from.id === user.id) {
         return Strings.breakoutYourself;
     }
 
-    const inmate = this.findOrCreateUser(msg.reply_to_message);
+    const inmate = this.findOrCreateUser(msg.reply_to_message.from.username);
 
     if(!(inmate.occupation instanceof CriminalOccupation)) {
         return `${lifeUser.mentionedUserName} ${Strings.isNotInPrison(inmate.username)}`;
@@ -139,6 +143,10 @@ export class Plugin extends AbstractPlugin {
   private hustle = (chat: Chat, user: User): string => {
     const lifeUser = this.findOrCreateUser(user.name);
 
+    if (lifeUser.occupation) {
+        return lifeUser.occupation.statusMessage;
+    }
+
     const successful = Math.random() >= 0.5;
 
     if (successful) {
@@ -147,16 +155,21 @@ export class Plugin extends AbstractPlugin {
         return `${lifeUser.mentionedUserName} ${Strings.hustleSuccessful(scoreToGain)}`;
     } else {
         lifeUser.incarcerate();
-        return lifeUser.mentionedUserName + lifeUser.occupation.startMessage;
+        return `${lifeUser.mentionedUserName} ${lifeUser.occupation.startMessage}`
     }
   }
   
   private work = (chat: Chat, user: User): string => {
     const lifeUser = this.findOrCreateUser(user.name);
+
+    if (lifeUser.occupation) {
+        return lifeUser.occupation.statusMessage;
+    }
+
     lifeUser.startWork(() => {
         chat.alterUserScore(new AlterUserScoreArgs(user, lifeUser.occupation.waitingTime * 20, PLUGIN_NAME, ScoreChangeReason.workCompleted));
     })
-    return lifeUser.mentionedUserName + lifeUser.occupation.startMessage;
+    return `${lifeUser.mentionedUserName} ${lifeUser.occupation.startMessage}`;
   }
 
   /// Helpers

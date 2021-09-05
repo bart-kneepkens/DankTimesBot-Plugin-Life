@@ -18,11 +18,11 @@ export class Strings {
     }
 
     static get officeEmpty(): string {
-        return "It's an empty day at the AFK office.."
+        return "It's an empty day at the office.."
     }
 
     static get workingAtTheOffice(): string {
-        return "🏢 <b> Players working at the office: </b> 🏢 ";
+        return "🏢 <b> Players working at the office </b> 🏢 ";
     }
 
     static get prisonEmpty(): string {
@@ -30,7 +30,7 @@ export class Strings {
     }
 
     static get currentlyInPrison(): string {
-        return "🔒 <b> Prison inmates: </b> 🔒";
+        return "🔒 <b> Prison inmates </b> 🔒";
     }
 
     static get breakoutInstructions(): string {
