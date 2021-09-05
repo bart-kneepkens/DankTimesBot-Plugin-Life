@@ -23,18 +23,15 @@ export class Plugin extends AbstractPlugin {
     super("Life", "1.0.0");
   }
 
-  /**
-   * @override
-   */
   public getPluginSpecificCommands(): BotCommand[] {
     const lifeCommand = new BotCommand("life", "Display info about the Life plugin", this.displayPluginInfo, true);
-    const statusCommand = new BotCommand("status", "", this.lifeRouter.bind(this), false);
+    const statusCommand = new BotCommand("status", "", this.displayStatus, false);
     const workCommand = new BotCommand("work", "", this.lifeRouter.bind(this), false);
     const crimeCommand = new BotCommand("hustle", "", this.lifeRouter.bind(this), false);
     const breakoutCommand = new BotCommand("breakout", "", this.lifeRouter.bind(this), false);
-    const officeCommand = new BotCommand("office", "", this.lifeRouter.bind(this), false);
-    const prisonCommand = new BotCommand("prison", "", this.lifeRouter.bind(this), false);
-    const bribeCommand = new BotCommand("bribe", "", this.lifeRouter.bind(this), false);
+    const officeCommand = new BotCommand("office", "", this.describeOffice, false);
+    const prisonCommand = new BotCommand("prison", "", this.describePrison, false);
+    const bribeCommand = new BotCommand("bribe", "", this.bribe, false);
     return [lifeCommand, statusCommand, workCommand, crimeCommand, breakoutCommand, officeCommand, prisonCommand, bribeCommand];
   }
 
@@ -46,7 +43,7 @@ export class Plugin extends AbstractPlugin {
     return user;
   }
 
-  private listOfficeWorkers(): string {
+  private describeOffice = (): string => {
         const entries = this.lifeUsers.filter(u => u.occupation instanceof WageSlaveOccupation).map(u => u.getBuildingEntry());
         if (entries.length == 0 ) {
             return "It's an empty day at the AFK office..";
@@ -54,7 +51,7 @@ export class Plugin extends AbstractPlugin {
         return "🏢 <b> People slaving at the AFK office </b> 🏢  \n-\t" + entries.join("\n-\t");
   }
 
-  private listPrisonInmates(): string {
+  private describePrison = (): string => {
     const entries = this.lifeUsers.filter(u => u.occupation instanceof CriminalOccupation).map(u => u.getBuildingEntry());
     if (entries.length == 0 ) {
         return "AFK State Penitentiary is completely empty..";
@@ -76,7 +73,7 @@ export class Plugin extends AbstractPlugin {
     }
   }
 
-  private bribe = (user: User, msg: any): string => {
+  private bribe = (chat: Chat, user: User, msg: any): string => {
     const args = msg.text.split(" ");
     const inmate = this.findOrCreateUser(user.name);
 
@@ -87,8 +84,8 @@ export class Plugin extends AbstractPlugin {
     if (args.length < 2) {
         return 'Provide argument [amount] - the amount of points you\'re willing to use to bribe the prison guards';
     }
-    if (isNaN(args[1])) {
-        return 'Provide a number please.';
+    if (isNaN(args[1]), args[1] > 0) {
+        return 'Provide a valid, positive number please.';
     }
     
     const amount = args[1];
@@ -122,24 +119,14 @@ export class Plugin extends AbstractPlugin {
       + `/${Commands.bribe} - Attempt to buy your way to freedom - provide an amount of money you're willing to spend!\n`;
   }
 
+  private displayStatus = (chat: Chat, user: User): string => {
+      return this.findOrCreateUser(user.name).explainStatus();
+  }
+
+
   private lifeRouter(chat: Chat, user: User, msg: any, match: string[]): string {
     const senderUser = this.findOrCreateUser(msg.from.username);
-    const command = msg.text.substring(1).split(" ")[0];
-
-    switch(command) {
-        case Commands.status: {
-            return senderUser.explainStatus();
-        }
-        case Commands.office: {
-            return this.listOfficeWorkers();
-        }
-        case Commands.prison: {
-            return this.listPrisonInmates();
-        }
-        case Commands.bribe: {
-            return this.bribe(user, msg);
-        }
-    }
+    const command = msg.text.substring(1).split(" ")[0].split("@")[0];
 
     if (senderUser.occupation) {
         return senderUser.getBusyMessage();

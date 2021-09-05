@@ -9,7 +9,7 @@ export class LifeUser {
 
     getBuildingEntry = (): string => {
         if (this.occupation) {
-            return this.username + " (" + this.occupation.getTimeRemaining() + " min)";
+            return this.username + " (" + this.occupation.getRemainingTimeMinutes() + " min)";
         }
         return "";
     }

@@ -8,17 +8,18 @@ export abstract class Occupation {
         this.endTime = new Date(Date.now() + (this.waitingTime * 60000));
     }
 
-    getTimeRemaining(): number {
+    getRemainingTimeMinutes(): number {
         return Math.round((this.endTime.valueOf() - new Date().valueOf()) / 60000);
     }
 
     protected getTimeRemainingAsString(): string {
-        const timeRemaining = this.getTimeRemaining();
-        if (timeRemaining === 1) {
-            return "for " + this.getTimeRemaining() + " more minute.";
-        }
-        else {
-            return "for " + this.getTimeRemaining() + " more minutes.";
+        const timeRemaining = this.getRemainingTimeMinutes();
+        if (timeRemaining == 0) {
+            return "with less than a minute to go"
+        } else if (timeRemaining === 1) {
+            return "for " + this.getRemainingTimeMinutes() + " more minute.";
+        } else {
+            return "for " + this.getRemainingTimeMinutes() + " more minutes.";
         }
     }
 
