@@ -7,6 +7,7 @@ import { LifeUser } from "./LifeUser";
 import { AlterUserScoreArgs } from "../../src/chat/alter-user-score-args";
 import { Strings } from './Strings';
 import { Random } from "./Random";
+import TelegramBot from "node-telegram-bot-api";
 
 const PLUGIN_NAME = "Life";
 
@@ -37,14 +38,14 @@ export class Plugin extends AbstractPlugin {
 
   /// Override
   public getPluginSpecificCommands(): BotCommand[] {
-    const lifeCommand = new BotCommand("life", `Display info about the ${PLUGIN_NAME} plugin`, this.displayPluginInfo, true);
-    const statusCommand = new BotCommand("status", "", this.displayStatus, false);
-    const workCommand = new BotCommand("work", "", this.work, false);
-    const crimeCommand = new BotCommand("hustle", "", this.hustle, false);
-    const breakoutCommand = new BotCommand("breakout", "", this.breakOut, false);
-    const officeCommand = new BotCommand("office", "", this.describeOffice, false);
-    const prisonCommand = new BotCommand("prison", "", this.describePrison, false);
-    const bribeCommand = new BotCommand("bribe", "", this.bribe, false);
+    const lifeCommand = new BotCommand(["life"], `Display info about the ${PLUGIN_NAME} plugin`, this.displayPluginInfo, true);
+    const statusCommand = new BotCommand(["status"], "", this.displayStatus, false);
+    const workCommand = new BotCommand(["work"], "", this.work, false);
+    const crimeCommand = new BotCommand(["hustle"], "", this.hustle, false);
+    const breakoutCommand = new BotCommand(["breakout"], "", this.breakOut, false);
+    const officeCommand = new BotCommand(["office"], "", this.describeOffice, false);
+    const prisonCommand = new BotCommand(["prison"], "", this.describePrison, false);
+    const bribeCommand = new BotCommand(["bribe"], "", this.bribe, false);
     return [lifeCommand, statusCommand, workCommand, crimeCommand, breakoutCommand, officeCommand, prisonCommand, bribeCommand];
   }
 
@@ -66,7 +67,7 @@ export class Plugin extends AbstractPlugin {
     return `${Strings.currentlyInPrison}\n-\t` + entries.join("\n-\t");
   }
   
-  private breakOut = (chat: Chat, user: User, msg: any, match: string[]): string => {
+  private breakOut = (chat: Chat, user: User, msg: TelegramBot.Message): string => {
     const lifeUser = this.findOrCreateUser(user.name);
 
     if (lifeUser.occupation) {
@@ -97,22 +98,22 @@ export class Plugin extends AbstractPlugin {
     }
   }
 
-  private bribe = (chat: Chat, user: User, msg: any): string => {
-    const args = msg.text.split(" ");
+  private bribe = (chat: Chat, user: User, msg: TelegramBot.Message, match: string): string => {
+    const args = match.split(" ");
     const inmate = this.findOrCreateUser(user.name);
 
     if(!(inmate.occupation instanceof CriminalOccupation)) {
         return `${inmate.mentionedUserName} ${Strings.youAreNotInPrison}`;
     }
 
-    if (args.length < 2) {
+    if (args.length < 1) {
         return Strings.bribeInstruction;
     }
-    if (isNaN(args[1]) || args[1] < 0) {
+    const amount = Number(args[0]);
+
+    if (isNaN(amount) || amount < 0) {
         return Strings.provideValidPositiveNumber;
     }
-    
-    const amount = args[1];
     const totalFunds = user.score;
 
     if (amount > totalFunds) {
