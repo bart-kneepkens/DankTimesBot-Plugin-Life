@@ -8,8 +8,11 @@ import { AlterUserScoreArgs } from "../../src/chat/alter-user-score-args";
 import { Strings } from './Strings';
 import { Random } from "./Random";
 import TelegramBot from "node-telegram-bot-api";
+import { ChatSettingTemplate } from "../../src/chat/settings/chat-setting-template";
 
 const PLUGIN_NAME = "Life";
+const WORK_MULTIPLIER_SETTING = "life.work.multiplier";
+const HUSTLE_MULTIPLIER_SETTING = "life.hustle.multiplier";
 
 export enum Commands {
     status = "status",
@@ -33,7 +36,7 @@ export class Plugin extends AbstractPlugin {
   private lifeUsers: LifeUser[] = [];
 
   constructor() {
-    super(PLUGIN_NAME, "1.1.0");
+    super(PLUGIN_NAME, "1.2.0");
   }
 
   /// Override
@@ -47,6 +50,15 @@ export class Plugin extends AbstractPlugin {
     const prisonCommand = new BotCommand(["prison"], "", this.describePrison, false);
     const bribeCommand = new BotCommand(["bribe"], "", this.bribe, false);
     return [lifeCommand, statusCommand, workCommand, crimeCommand, breakoutCommand, officeCommand, prisonCommand, bribeCommand];
+  }
+
+
+  /// Override
+  public getPluginSpecificChatSettings(): Array<ChatSettingTemplate<any>> {
+    return [
+      new ChatSettingTemplate(WORK_MULTIPLIER_SETTING, "work reward multiplier", 1, (original) => Number(original), (value) => null),
+      new ChatSettingTemplate(HUSTLE_MULTIPLIER_SETTING, "hustle reward multiplier", 1, (original) => Number(original), (value) => null),
+    ];
   }
 
   /// Commands
@@ -148,14 +160,18 @@ export class Plugin extends AbstractPlugin {
         return lifeUser.occupation.statusMessage;
     }
 
+    const multiplier: number = chat.getSetting(HUSTLE_MULTIPLIER_SETTING);
+
     const successful = Math.random() >= 0.5;
 
     if (successful) {
-        const scoreToGain = Random.number(60, 700);
+        const scoreToGain = Random.number(60, 700) * multiplier;
         chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, PLUGIN_NAME, ScoreChangeReason.crimeCommited));
         return `${lifeUser.mentionedUserName} ${Strings.hustleSuccessful(scoreToGain)}`;
     } else {
-        lifeUser.incarcerate();
+        lifeUser.incarcerate(() => {
+          this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
+        });
         return `${lifeUser.mentionedUserName} ${lifeUser.occupation.startMessage}`
     }
   }
@@ -167,9 +183,14 @@ export class Plugin extends AbstractPlugin {
         return lifeUser.occupation.statusMessage;
     }
 
+    const multiplier: number = chat.getSetting(WORK_MULTIPLIER_SETTING);
+
     lifeUser.startWork(() => {
-        chat.alterUserScore(new AlterUserScoreArgs(user, lifeUser.occupation.waitingTime * 20, PLUGIN_NAME, ScoreChangeReason.workCompleted));
+      const scoreToGain = lifeUser.occupation.waitingTime * 20 * multiplier;
+      chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, PLUGIN_NAME, ScoreChangeReason.workCompleted));
+      this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.doneWorking(scoreToGain)}`);
     })
+
     return `${lifeUser.mentionedUserName} ${lifeUser.occupation.startMessage}`;
   }
 

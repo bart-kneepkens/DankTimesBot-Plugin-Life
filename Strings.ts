@@ -84,6 +84,10 @@ export class Strings {
         + `/${Commands.bribe} - Attempt to buy your way to freedom - provide an amount of money you're willing to spend!\n`;
     }
 
+    static get releasedFromJail(): string {
+        return `You're released from jail!`;
+    }
+
     static isNotInPrison(username: string): string {
         return `${username} is not in prison.`;
     }
@@ -110,5 +114,9 @@ export class Strings {
 
     static thrownInJail(minutesLeft: number): string {
         return `<b>The police got a hold of you.</b> You're going to prison for ${Strings.minutes(minutesLeft)} 👮🏻‍♂️`;
+    }
+
+    static doneWorking(reward: number): string {
+        return `You're done working and earned ${reward} points!`;
     }
 }

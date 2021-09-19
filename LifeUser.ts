@@ -31,9 +31,9 @@ export class LifeUser {
         this.setTimerForOccupation(60000 * this.occupation.waitingTime, completion);
     }
 
-    incarcerate = () => {
+    incarcerate = (completion: (() => void)) => {
         this.occupation = new CriminalOccupation();
-        this.setTimerForOccupation(60000 * this.occupation.waitingTime);
+        this.setTimerForOccupation(60000 * this.occupation.waitingTime, completion);
     }
 
     clearOccupation = () => {
