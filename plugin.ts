@@ -36,7 +36,7 @@ export class Plugin extends AbstractPlugin {
   private lifeUsers: LifeUser[] = [];
 
   constructor() {
-    super(PLUGIN_NAME, "1.2.0");
+    super(PLUGIN_NAME, "1.2.1");
   }
 
   /// Override
@@ -105,7 +105,9 @@ export class Plugin extends AbstractPlugin {
         chat.alterUserScore(new AlterUserScoreArgs(user, 100, PLUGIN_NAME, ScoreChangeReason.breakoutSucceeded));
         return `${lifeUser.mentionedUserName} ${Strings.didBreakOutInmate(inmate.username)}`;
     } else {
-        lifeUser.incarcerate();
+        lifeUser.incarcerate(() => {
+          this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
+        });
         return `${lifeUser.mentionedUserName} ${Strings.breakoutFailed(lifeUser.occupation.waitingTime)}`
     }
   }

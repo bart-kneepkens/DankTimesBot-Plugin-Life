@@ -85,7 +85,7 @@ export class Strings {
     }
 
     static get releasedFromJail(): string {
-        return `You're released from jail!`;
+        return `You're released from prison!`;
     }
 
     static isNotInPrison(username: string): string {
