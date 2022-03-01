@@ -81,7 +81,8 @@ export class Strings {
         + `/${Commands.prison} - See who's locked up in prison\n`
         + `/${Commands.office} - See who's in the office\n\n`
         + `/${Commands.breakout} - Reply this to a prison inmate to attempt to break them out\n`
-        + `/${Commands.bribe} - Attempt to buy your way to freedom - provide an amount of money you're willing to spend!\n`;
+        + `/${Commands.bribe} - Attempt to buy your way to freedom - provide an amount of money you're willing to spend!\n\n`
+        + `/${Commands.togglelifetags} - Toggles if you are tagged whenever you are done working or completed your sentence`;
     }
 
     static get releasedFromJail(): string {
