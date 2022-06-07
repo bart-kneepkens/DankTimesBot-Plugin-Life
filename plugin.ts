@@ -466,6 +466,9 @@ export class Plugin extends AbstractPlugin {
       lifeChatData = { chatId: chatId, usersNotTagged: [], bounties: [] };
       this.lifeChatsData.set(chatId, lifeChatData);
     }
+    if (!lifeChatData.bounties) {
+      lifeChatData.bounties = [];
+    }
     return lifeChatData;
   }
 }
