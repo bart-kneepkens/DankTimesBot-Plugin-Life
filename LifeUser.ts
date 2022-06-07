@@ -1,14 +1,16 @@
-import { Occupation, WageSlaveOccupation, CriminalOccupation } from "./Occupation";
+import { Occupation, WageSlaveOccupation, CriminalOccupation, HospitalisedOccupation } from "./Occupation";
 import { Strings } from "./Strings";
 
 export class LifeUser {
 
     public occupation: Occupation = null;
 
+    private timeOut: NodeJS.Timeout | null = null;
+
     constructor(public username: string) { }
 
     get mentionedUserName(): string {
-        return "@" + this.username + ":";
+        return "@" + this.username;
     }
 
     get buildingEntry(): string {
@@ -21,29 +23,41 @@ export class LifeUser {
 
     get status(): string {
         if (this.occupation) {
-            return `${this.mentionedUserName} ${this.occupation.statusMessage}`;
+            return `${this.mentionedUserName} ${this.occupation.statusMessage(null)}`;
         }
         return Strings.youAreFree;
     }
 
-    startWork = (completion: (() => void)) => {
+    startWork (completion: (() => void)) {
+        this.clearOccupation();
         this.occupation = new WageSlaveOccupation();
-        this.setTimerForOccupation(60000 * this.occupation.waitingTime, completion);
+        this.setTimerForOccupation(completion);
     }
 
-    incarcerate = (completion: (() => void)) => {
+    incarcerate (completion: (() => void)) {
+        this.clearOccupation();
         this.occupation = new CriminalOccupation();
-        this.setTimerForOccupation(60000 * this.occupation.waitingTime, completion);
+        this.setTimerForOccupation(completion);
     }
 
-    clearOccupation = () => {
+    hospitalise (completion: (() => void)) {
+        this.clearOccupation();
+        this.occupation = new HospitalisedOccupation();
+        this.setTimerForOccupation(completion);
+    }
+
+    clearOccupation () {
+        if (this.timeOut) {
+            clearTimeout(this.timeOut);
+            this.timeOut = null;
+        }
         this.occupation = null;
     }
 
-    private setTimerForOccupation(waitingTime: number, completion?: (() => void)) {
-        setTimeout(() => {
+    private setTimerForOccupation(completion?: (() => void)) {
+        this.timeOut = setTimeout(() => {
             completion && completion();
             this.clearOccupation();
-        }, waitingTime);
+        }, 60000 * this.occupation.waitingTime);
     }
 }

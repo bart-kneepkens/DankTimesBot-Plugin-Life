@@ -3,12 +3,13 @@ import { Random } from "./Random";
 
 export abstract class Occupation {
 
-    public waitingTime: number;
-    private endTime: Date;
+    private readonly endTime: Date;
 
-    constructor(minTime: number, maxTime: number) {
-        this.waitingTime = Random.number(minTime, maxTime);
-        this.endTime = new Date(Date.now() + (this.waitingTime * 60000));
+    constructor(
+        public readonly waitingTime: number,
+        public readonly mayInterruptForHospitalisation: boolean = true) { 
+
+        this.endTime = new Date(Date.now() + (waitingTime * 60000));
     }
 
     get remainingTimeMinutes(): number {
@@ -24,35 +25,50 @@ export abstract class Occupation {
 
     abstract get startMessage(): string;
 
-    abstract get statusMessage(): string;
+    abstract statusMessage(userName: string | null): string;
 }
 
 export class WageSlaveOccupation extends Occupation {
 
     constructor() {
-        super(2, 10);
+        super(Random.number(2, 10));
     }
 
     get startMessage(): string {
         return Strings.startedWorking(this.remainingTimeMinutes);
     }
 
-    get statusMessage(): string {
-        return `${Strings.currentlyWorking} ${this.timeRemainingAsString} 🏢`;
+    statusMessage(userName: string | null): string {
+        return `${Strings.currentlyWorking(userName)} ${this.timeRemainingAsString} 🏢`;
     }
 }
 
 export class CriminalOccupation extends Occupation {
 
     constructor() {
-        super(10, 20);
+        super(Random.number(10, 20));
     }
 
     get startMessage(): string {
         return Strings.thrownInJail(this.remainingTimeMinutes);
     }
 
-    get statusMessage(): string {
-        return `${Strings.currentlyIncarcerated} ${this.timeRemainingAsString } 🔒`;
+    statusMessage(userName: string | null): string {
+        return `${Strings.currentlyIncarcerated(userName)} ${this.timeRemainingAsString } 🔒`;
+    }
+}
+
+export class HospitalisedOccupation extends Occupation {
+
+    constructor() {
+        super(60 * 8, false);
+    }
+
+    get startMessage(): string {
+        return "";  // Unused.
+    }
+
+    statusMessage(userName: string | null): string {
+        return `${Strings.currentlyHospitalised(userName)} ${this.timeRemainingAsString } 🏥`;
     }
 }

@@ -33,6 +33,34 @@ export class Strings {
         return "🔒 <b> Prison inmates </b> 🔒";
     }
 
+    static get hospitalEmpty(): string {
+        return "No patients at the hospital today..";
+    }
+
+    static get currentlyInHospital(): string {
+        return "🏥 <b> Hospital patients </b> 🏥";
+    }
+
+    static get policeBounties(): string {
+        return "📃 <b> Police bounties </b> 📃"
+    }
+
+    static get playerBounties(): string {
+        return "📃 <b> Player bounties </b> 📃"
+    }
+
+    static get placeBountyTooFewArgumentsError(): string {
+        return "✋ You have to specify a user and a reward, e.g. /placebounty @User 500";
+    }
+
+    static get killTooFewArgumentsError(): string {
+        return "✋ You have to specify a user, e.g. /kill @User";
+    }
+
+    static get userDoesNotExist(): string {
+        return "That user does not exist! ✋";
+    }
+
     static get breakoutInstructions(): string {
         return "To break someone out, reply to their message with <code>/breakout</code> ✋";
     }
@@ -42,7 +70,7 @@ export class Strings {
     }
 
     static get youAreNotInPrison(): string {
-        return "you are not in prison, silly 🤪";
+        return "You are not in prison, silly 🤪";
     }
 
     static get bribeInstruction(): string {
@@ -50,23 +78,36 @@ export class Strings {
     }
 
     static get provideValidPositiveNumber(): string {
-        return "Provide a valid, positive number please";
+        return "Provide a valid, positive number please ✋";
     }
 
     static get cantSpendMoreThanYouHave(): string {
-        return "You can't spend more than you have on bribing";
+        return "You can't spend more than you have ✋";
     }
 
     static get bribingSuccessful(): string {
         return "👮🏻‍♂️ Your bribing attempt was successful. You are released from prison!";
     }
 
-    static get currentlyWorking(): string {
+    static currentlyWorking(userName: string | null = null): string {
+        if (userName) {
+            return `${userName} is currently working`;
+        }
         return "You are currently working";
     }
 
-    static get currentlyIncarcerated(): string {
+    static currentlyIncarcerated(userName: string = null): string {
+        if (userName) {
+            return `${userName} is currently in prison`;
+        }
         return "You are currently in prison";
+    }
+
+    static currentlyHospitalised(userName: string = null): string {
+        if (userName) {
+            return `${userName} is currently recovering in the hospital`;
+        }
+        return "You are currently recovering in the hospital";
     }
 
     static get youAreFree(): string {
@@ -77,11 +118,15 @@ export class Strings {
         return "🍋 Life - Choose your destiny 🍋 \n\n"
         + `/${Commands.status} - To see how life is looking for you\n`
         + `/${Commands.work} - To earn money the safe (and boring) way\n`
-        + `/${Commands.crime} - To earn money the gangster way - you may end up in prison!\n\n` 
+        + `/${Commands.crime} - To earn money the gangster way - you may end up in prison!\n` 
+        + `/${Commands.office} - See who's in the office\n`
+        + `/${Commands.hospital} - See who's in the hospital\n`
         + `/${Commands.prison} - See who's locked up in prison\n`
-        + `/${Commands.office} - See who's in the office\n\n`
         + `/${Commands.breakout} - Reply this to a prison inmate to attempt to break them out\n`
-        + `/${Commands.bribe} - Attempt to buy your way to freedom - provide an amount of money you're willing to spend!\n\n`
+        + `/${Commands.bribe} - Attempt to buy your way to freedom - provide an amount of money you're willing to spend!\n`
+        + `/${Commands.bounties} - See all outstanding bounties\n`
+        + `/${Commands.placebounty} - Place a bounty on a player\n`
+        + `/${Commands.kill} - Attempt to kill a player to claim their bounty\n`
         + `/${Commands.togglelifetags} - Toggles if you are tagged whenever you are done working or completed your sentence`;
     }
 
@@ -89,12 +134,16 @@ export class Strings {
         return `You're released from prison!`;
     }
 
+    static get releasedFromHospital(): string {
+        return "You're released from the hospital!";
+    }
+
     static isNotInPrison(username: string): string {
         return `${username} is not in prison.`;
     }
 
     static didBreakOutInmate(username: string): string {
-        return `broke out ${username}. Here's a reward!`;
+        return `Broke out ${username}. Here's a reward!`;
     }
 
     static breakoutFailed(prisonTimeMinutes: number): string {
@@ -119,5 +168,9 @@ export class Strings {
 
     static doneWorking(reward: number): string {
         return `You're done working and earned ${reward} points!`;
+    }
+    
+    static placedBounty(bountyPlacer: string, bounty: number, bountyTarget: string): string {
+        return `📃 @${bountyPlacer} put a bounty worth ${bounty} points on @${bountyTarget} !`;
     }
 }
