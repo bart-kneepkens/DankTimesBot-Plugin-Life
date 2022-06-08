@@ -60,8 +60,8 @@ export class CriminalOccupation extends Occupation {
 
 export class HospitalisedOccupation extends Occupation {
 
-    constructor() {
-        super(60 * 8, false);
+    constructor(minutes: number) {
+        super(minutes, false);
     }
 
     get startMessage(): string {

@@ -37,10 +37,10 @@ export class PluginHelperFunctions {
         let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.isPoliceBounty && chatBounty.userId === user.id);
 
         if (!chatBounty) {
-            chatBounty = { bounty: bounty, isPoliceBounty: true, userId: user.id };
+            chatBounty = { bounty: Math.round(bounty), isPoliceBounty: true, userId: user.id };
             lifeChatData.bounties.push(chatBounty);
         } else {
-            chatBounty.bounty += bounty;
+            chatBounty.bounty = Math.round(chatBounty.bounty + bounty);
         }
     }
 
@@ -71,7 +71,8 @@ export class PluginHelperFunctions {
         if (targetLifeUser.occupation?.mayInterruptForHospitalisation === false) {
             return { errorMsg: targetLifeUser.occupation.statusMessage(targetLifeUser.username), killCosts: null, targetUser: null };
         }
-        const killCosts = Math.round(Math.max(user.score * 0.25 + targetUser.score * 0.25, 100));
+        const killCostModifier = chat.getSetting<number>(Strings.KILL_COST_PERCENTAGE_SETTING) / 100;
+        const killCosts = Math.round(Math.max(user.score * killCostModifier + targetUser.score * killCostModifier, 100));
 
         if (killCosts > user.score) {
             return { errorMsg: Strings.cantSpendMoreThanYouHave, killCosts: null, targetUser: null };

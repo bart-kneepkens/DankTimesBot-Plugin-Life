@@ -40,9 +40,9 @@ export class LifeUser {
         this.setTimerForOccupation(completion);
     }
 
-    hospitalise (completion: (() => void)) {
+    hospitalise (minutes: number, completion: (() => void)) {
         this.clearOccupation();
-        this.occupation = new HospitalisedOccupation();
+        this.occupation = new HospitalisedOccupation(minutes);
         this.setTimerForOccupation(completion);
     }
 

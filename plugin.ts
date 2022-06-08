@@ -17,10 +17,6 @@ import { PluginHelperFunctions } from "./plugin-helper-functions";
 import { Commands } from "./model/Commands";
 import { ScoreChangeReason } from "./model/ScoreChangeReason";
 
-const PLUGIN_NAME = "Life";
-const WORK_MULTIPLIER_SETTING = "life.work.multiplier";
-const HUSTLE_MULTIPLIER_SETTING = "life.hustle.multiplier";
-
 export class Plugin extends AbstractPlugin {
 
   private static readonly LIFE_CHATS_DATA_FILE = "life-chats-data.json";
@@ -30,7 +26,7 @@ export class Plugin extends AbstractPlugin {
   private readonly helper: PluginHelperFunctions;
 
   constructor() {
-    super(PLUGIN_NAME, "1.3.0-alpha");
+    super(Strings.PLUGIN_NAME, "1.3.0-alpha");
     this.subscribeToPluginEvent(PluginEvent.BotStartup, this.onBotStartup.bind(this));
     this.subscribeToPluginEvent(PluginEvent.BotShutdown, () => this.saveDataToFile(Plugin.LIFE_CHATS_DATA_FILE, this.lifeChatsData));
     this.helper = new PluginHelperFunctions(this.lifeChatsData, this.lifeUsers);
@@ -38,7 +34,7 @@ export class Plugin extends AbstractPlugin {
 
   /// Override
   public getPluginSpecificCommands(): BotCommand[] {
-    const lifeCommand = new BotCommand([Commands.life], `Display info about the ${PLUGIN_NAME} plugin`, this.displayPluginInfo.bind(this), true);
+    const lifeCommand = new BotCommand([Commands.life], `Display info about the ${Strings.PLUGIN_NAME} plugin`, this.displayPluginInfo.bind(this), true);
     const statusCommand = new BotCommand([Commands.status], "", this.displayStatus.bind(this), false);
     const workCommand = new BotCommand([Commands.work], "", this.work.bind(this), false);
     const crimeCommand = new BotCommand([Commands.crime], "", this.hustle.bind(this), false);
@@ -58,8 +54,10 @@ export class Plugin extends AbstractPlugin {
   /// Override
   public getPluginSpecificChatSettings(): Array<ChatSettingTemplate<any>> {
     return [
-      new ChatSettingTemplate(WORK_MULTIPLIER_SETTING, "work reward multiplier", 1, (original) => Number(original), (value) => null),
-      new ChatSettingTemplate(HUSTLE_MULTIPLIER_SETTING, "hustle reward multiplier", 1, (original) => Number(original), (value) => null),
+      new ChatSettingTemplate(Strings.WORK_MULTIPLIER_SETTING, "work reward multiplier", 1, (original) => Number(original), (value) => null),
+      new ChatSettingTemplate(Strings.HUSTLE_MULTIPLIER_SETTING, "hustle reward multiplier", 1, (original) => Number(original), (value) => null),
+      new ChatSettingTemplate(Strings.KILL_COST_PERCENTAGE_SETTING, "percentage of killer's points plus victim's points required to kill", 15, (original) => Number(original), (value) => null),
+      new ChatSettingTemplate(Strings.HOSPITAL_DURATION_MINUTES_SETTING, "duration in minutes player stays in hospital after 'killed'", 60 * 8, (original) => Number(original), (value) => null),
     ];
   }
 
@@ -150,7 +148,7 @@ export class Plugin extends AbstractPlugin {
     } else {
       chatBounty.bounty += bounty;
     }
-    chat.alterUserScore(new AlterUserScoreArgs(user, -bounty, PLUGIN_NAME, ScoreChangeReason.placedBounty));
+    chat.alterUserScore(new AlterUserScoreArgs(user, -bounty, Strings.PLUGIN_NAME, ScoreChangeReason.placedBounty));
     return Strings.placedBounty(user.name, bounty, targetUser.name);
   }
 
@@ -169,31 +167,31 @@ export class Plugin extends AbstractPlugin {
       if (preparation.errorMsg) {
         return preparation.errorMsg;
       }
-      chat.alterUserScore(new AlterUserScoreArgs(user, -preparation.killCosts, PLUGIN_NAME, ScoreChangeReason.killPlayer));
+      chat.alterUserScore(new AlterUserScoreArgs(user, -preparation.killCosts, Strings.PLUGIN_NAME, ScoreChangeReason.killPlayer));
       const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
       const bounties = lifeChatData.bounties.filter((bounty) => bounty.userId === preparation.targetUser.id);
       const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser.name);
       const lifeUser = this.helper.findOrCreateUser(user.name);
 
       if (Random.number(0, 100) >= 40) {   
-        targetLifeUser.hospitalise(() => {
+        targetLifeUser.hospitalise(chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING), () => {
           if (!lifeChatData.usersNotTagged.includes(preparation.targetUser.id)) {
             this.sendMessage(chat.id, `${targetLifeUser.mentionedUserName} ${Strings.releasedFromHospital}`);
           }
         });
 
         let bountyReward = bounties.map((bounty) => bounty.bounty).reduce((sum, current) => sum + current);
-        bountyReward = chat.alterUserScore(new AlterUserScoreArgs(user, bountyReward, PLUGIN_NAME, ScoreChangeReason.receivedBounty));
+        bountyReward = chat.alterUserScore(new AlterUserScoreArgs(user, bountyReward, Strings.PLUGIN_NAME, ScoreChangeReason.receivedBounty));
 
         if (!bounties.find((bounty) => bounty.isPoliceBounty)) {
-          const bountyForUnlawfulKilling = 700 * chat.getSetting<number>(HUSTLE_MULTIPLIER_SETTING);
+          const bountyForUnlawfulKilling = 700 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
           this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKilling);
         }
         bounties.forEach((bounty) => lifeChatData.bounties.splice(lifeChatData.bounties.indexOf(bounty), 1));
         return `💀 @${user.name} has mortally wounded ${targetLifeUser.mentionedUserName} and claimed a ${bountyReward} points bounty!`;
 
       } else if (!bounties.find((bounty) => bounty.isPoliceBounty)) {
-        const bountyForUnlawfulKillingAttempt = 350 * chat.getSetting<number>(HUSTLE_MULTIPLIER_SETTING);
+        const bountyForUnlawfulKillingAttempt = 350 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
         this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKillingAttempt);
 
         lifeUser.incarcerate(() => {
@@ -231,8 +229,8 @@ export class Plugin extends AbstractPlugin {
 
     if (successful) {
       inmate.clearOccupation();
-      const scoreGained = 230 * chat.getSetting<number>(HUSTLE_MULTIPLIER_SETTING);
-      chat.alterUserScore(new AlterUserScoreArgs(user, scoreGained, PLUGIN_NAME, ScoreChangeReason.breakoutSucceeded));
+      const scoreGained = 230 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
+      chat.alterUserScore(new AlterUserScoreArgs(user, scoreGained, Strings.PLUGIN_NAME, ScoreChangeReason.breakoutSucceeded));
 
       this.helper.addPoliceBounty(chat, user, scoreGained);
       const freedUser = chat.getOrCreateUser(msg.reply_to_message.from.id);
@@ -274,7 +272,7 @@ export class Plugin extends AbstractPlugin {
     }
     const chance = (amount / totalFunds);
     const succeeds = Math.random() < (chance * 4.2);
-    const actualBribedAmount = chat.alterUserScore(new AlterUserScoreArgs(user, -amount, PLUGIN_NAME, ScoreChangeReason.bribe));
+    const actualBribedAmount = chat.alterUserScore(new AlterUserScoreArgs(user, -amount, Strings.PLUGIN_NAME, ScoreChangeReason.bribe));
 
     if (succeeds) {
       inmate.clearOccupation();
@@ -312,13 +310,13 @@ export class Plugin extends AbstractPlugin {
       return lifeUser.occupation.statusMessage(null);
     }
 
-    const multiplier: number = chat.getSetting(HUSTLE_MULTIPLIER_SETTING);
+    const multiplier: number = chat.getSetting(Strings.HUSTLE_MULTIPLIER_SETTING);
 
     const successful = Math.random() >= 0.5;
 
     if (successful) {
       const scoreToGain = Random.number(60, 700) * multiplier;
-      const actualScoreGained = chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, PLUGIN_NAME, ScoreChangeReason.crimeCommited));
+      const actualScoreGained = chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, Strings.PLUGIN_NAME, ScoreChangeReason.crimeCommited));
       this.helper.addPoliceBounty(chat, user, scoreToGain);
       return `${lifeUser.mentionedUserName} ${Strings.hustleSuccessful(actualScoreGained)}`;
     } else {
@@ -338,11 +336,11 @@ export class Plugin extends AbstractPlugin {
       return lifeUser.occupation.statusMessage(null);
     }
 
-    const multiplier: number = chat.getSetting(WORK_MULTIPLIER_SETTING);
+    const multiplier: number = chat.getSetting(Strings.WORK_MULTIPLIER_SETTING);
 
     lifeUser.startWork(() => {
       let scoreToGain = lifeUser.occupation.waitingTime * 20 * multiplier;
-      scoreToGain = chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, PLUGIN_NAME, ScoreChangeReason.workCompleted));
+      scoreToGain = chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, Strings.PLUGIN_NAME, ScoreChangeReason.workCompleted));
 
       if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
         this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.doneWorking(scoreToGain)}`);
