@@ -1,5 +1,5 @@
 import { Occupation, WageSlaveOccupation, CriminalOccupation, HospitalisedOccupation } from "./Occupation";
-import { Strings } from "./Strings";
+import { Strings } from "../Strings";
 
 export class LifeUser {
 

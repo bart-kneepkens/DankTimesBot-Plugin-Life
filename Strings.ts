@@ -1,4 +1,4 @@
-import { Commands } from "./plugin";
+import { Commands } from "./model/Commands";
 
 export class Strings {
     static minutes(value: number): string {

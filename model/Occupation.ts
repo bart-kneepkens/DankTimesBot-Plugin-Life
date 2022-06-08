@@ -1,5 +1,5 @@
-import { Strings } from "./Strings";
-import { Random } from "./Random";
+import { Strings } from "../Strings";
+import { Random } from "../Random";
 
 export abstract class Occupation {
 

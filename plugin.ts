@@ -2,8 +2,8 @@ import { BotCommand } from "../../src/bot-commands/bot-command";
 import { Chat } from "../../src/chat/chat";
 import { User } from "../../src/chat/user/user";
 import { AbstractPlugin } from "../../src/plugin-host/plugin/plugin";
-import { WageSlaveOccupation, CriminalOccupation, HospitalisedOccupation } from "./Occupation";
-import { LifeUser } from "./LifeUser";
+import { WageSlaveOccupation, CriminalOccupation, HospitalisedOccupation } from "./model/Occupation";
+import { LifeUser } from "./model/LifeUser";
 import { AlterUserScoreArgs } from "../../src/chat/alter-user-score-args";
 import { Strings } from './Strings';
 import { Random } from "./Random";
@@ -11,51 +11,29 @@ import TelegramBot from "node-telegram-bot-api";
 import { ChatSettingTemplate } from "../../src/chat/settings/chat-setting-template";
 import { PluginEvent } from "../../src/plugin-host/plugin-events/plugin-event-types";
 import { EmptyEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/empty-event-arguments";
-import { LifeChatData } from "./LifeChatData";
-import { Bounty } from "./Bounty";
+import { LifeChatData } from "./model/LifeChatData";
 import { BotCommandConfirmationQuestion } from "../../src/bot-commands/bot-command-confirmation-question";
+import { PluginHelperFunctions } from "./plugin-helper-functions";
+import { Commands } from "./model/Commands";
+import { ScoreChangeReason } from "./model/ScoreChangeReason";
 
 const PLUGIN_NAME = "Life";
 const WORK_MULTIPLIER_SETTING = "life.work.multiplier";
 const HUSTLE_MULTIPLIER_SETTING = "life.hustle.multiplier";
-
-export enum Commands {
-  life = "life",
-  status = "status",
-  work = "work",
-  crime = "hustle",
-  breakout = "breakout",
-  office = "office",
-  prison = "prison",
-  bribe = "bribe",
-  togglelifetags = "togglelifetags",
-  hospital = "hospital",
-  bounties = "bounties",
-  placebounty = "placebounty",
-  kill = "kill",
-}
-
-export enum ScoreChangeReason {
-  crimeCommited = `crimeCommitted`,
-  workCompleted = `workCompleted`,
-  bribe = `bribe`,
-  breakoutSucceeded = `breakoutSucceeded`,
-  placedBounty = 'placedBounty',
-  killPlayer = 'killPlayer',
-  receivedBounty = 'receivedBounty'
-}
 
 export class Plugin extends AbstractPlugin {
 
   private static readonly LIFE_CHATS_DATA_FILE = "life-chats-data.json";
 
   private readonly lifeChatsData: Map<number, LifeChatData> = new Map();
-  private lifeUsers: LifeUser[] = [];
+  private readonly lifeUsers: LifeUser[] = [];
+  private readonly helper: PluginHelperFunctions;
 
   constructor() {
     super(PLUGIN_NAME, "1.3.0-alpha");
     this.subscribeToPluginEvent(PluginEvent.BotStartup, this.onBotStartup.bind(this));
     this.subscribeToPluginEvent(PluginEvent.BotShutdown, () => this.saveDataToFile(Plugin.LIFE_CHATS_DATA_FILE, this.lifeChatsData));
+    this.helper = new PluginHelperFunctions(this.lifeChatsData, this.lifeUsers);
   }
 
   /// Override
@@ -76,7 +54,6 @@ export class Plugin extends AbstractPlugin {
     return [lifeCommand, statusCommand, workCommand, crimeCommand, breakoutCommand, officeCommand, prisonCommand, bribeCommand, togglelifetagsCommand,
       hospitalCommand, bountiesCommand, placeBountyCommand, killPlayerCommand];
   }
-
 
   /// Override
   public getPluginSpecificChatSettings(): Array<ChatSettingTemplate<any>> {
@@ -118,7 +95,7 @@ export class Plugin extends AbstractPlugin {
   }
 
   private bounties(chat: Chat, user: User): string {
-    const lifeChatData = this.getOrCreateLifeChatsData(chat.id);
+    const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
 
     if (lifeChatData.bounties.length == 0) {
       return 'There are no active bounties..';
@@ -126,8 +103,8 @@ export class Plugin extends AbstractPlugin {
     const policeBounties = lifeChatData.bounties.filter((bounty) => bounty.isPoliceBounty);
     const playerBounties = lifeChatData.bounties.filter((bounty) => !bounty.isPoliceBounty);
 
-    const policeBountiesStr = this.createBountiesString(policeBounties, chat);
-    const playerBountiesStr = this.createBountiesString(playerBounties, chat);
+    const policeBountiesStr = this.helper.createBountiesString(policeBounties, chat);
+    const playerBountiesStr = this.helper.createBountiesString(playerBounties, chat);
     let bountyStr = '';
 
     if (policeBountiesStr.length > 0) {
@@ -151,7 +128,7 @@ export class Plugin extends AbstractPlugin {
     if (parameters.length < 2) {
       return Strings.placeBountyTooFewArgumentsError;
     }
-    const targetUser = this.getChatUserFromParameter(chat, parameters[0]);
+    const targetUser = this.helper.getChatUserFromParameter(chat, parameters[0]);
 
     if (targetUser === null) {
       return Strings.userDoesNotExist;
@@ -164,7 +141,7 @@ export class Plugin extends AbstractPlugin {
     if (user.score < bounty) {
       return Strings.cantSpendMoreThanYouHave;
     }
-    const lifeChatData = this.getOrCreateLifeChatsData(chat.id);
+    const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
     let chatBounty = lifeChatData.bounties.find((chatBounty) => !chatBounty.isPoliceBounty && chatBounty.userId === targetUser.id);
 
     if (!chatBounty) {
@@ -178,7 +155,7 @@ export class Plugin extends AbstractPlugin {
   }
 
   private kill(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | BotCommandConfirmationQuestion {
-    const preparation = this.prepareKill(chat, user, match);
+    const preparation = this.helper.prepareKill(chat, user, match);
 
     if (preparation.errorMsg) {
       return preparation.errorMsg;
@@ -187,16 +164,16 @@ export class Plugin extends AbstractPlugin {
     question.confirmationQuestionText = `💀 Making an attempt on ${preparation.targetUser.name}'s life will cost ${preparation.killCosts} points. Type 'yes' to confirm.`;
     
     question.actionOnConfirm = () => {
-      const preparation = this.prepareKill(chat, user, match);
+      const preparation = this.helper.prepareKill(chat, user, match);
 
       if (preparation.errorMsg) {
         return preparation.errorMsg;
       }
       chat.alterUserScore(new AlterUserScoreArgs(user, -preparation.killCosts, PLUGIN_NAME, ScoreChangeReason.killPlayer));
-      const lifeChatData = this.getOrCreateLifeChatsData(chat.id);
+      const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
       const bounties = lifeChatData.bounties.filter((bounty) => bounty.userId === preparation.targetUser.id);
-      const targetLifeUser = this.findOrCreateUser(preparation.targetUser.name);
-      const lifeUser = this.findOrCreateUser(user.name);
+      const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser.name);
+      const lifeUser = this.helper.findOrCreateUser(user.name);
 
       if (Random.number(0, 100) >= 40) {   
         targetLifeUser.hospitalise(() => {
@@ -210,14 +187,14 @@ export class Plugin extends AbstractPlugin {
 
         if (!bounties.find((bounty) => bounty.isPoliceBounty)) {
           const bountyForUnlawfulKilling = 700 * chat.getSetting<number>(HUSTLE_MULTIPLIER_SETTING);
-          this.addPoliceBounty(chat, user, bountyForUnlawfulKilling);
+          this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKilling);
         }
         bounties.forEach((bounty) => lifeChatData.bounties.splice(lifeChatData.bounties.indexOf(bounty), 1));
         return `💀 @${user.name} has mortally wounded ${targetLifeUser.mentionedUserName} and claimed a ${bountyReward} points bounty!`;
 
       } else if (!bounties.find((bounty) => bounty.isPoliceBounty)) {
         const bountyForUnlawfulKillingAttempt = 350 * chat.getSetting<number>(HUSTLE_MULTIPLIER_SETTING);
-        this.addPoliceBounty(chat, user, bountyForUnlawfulKillingAttempt);
+        this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKillingAttempt);
 
         lifeUser.incarcerate(() => {
           if (!lifeChatData.usersNotTagged.includes(user.id)) {
@@ -232,7 +209,7 @@ export class Plugin extends AbstractPlugin {
   }
 
   private breakOut = (chat: Chat, user: User, msg: TelegramBot.Message): string => {
-    const lifeUser = this.findOrCreateUser(user.name);
+    const lifeUser = this.helper.findOrCreateUser(user.name);
 
     if (lifeUser.occupation) {
       return lifeUser.occupation.statusMessage(null);
@@ -244,7 +221,7 @@ export class Plugin extends AbstractPlugin {
       return Strings.breakoutYourself;
     }
 
-    const inmate = this.findOrCreateUser(msg.reply_to_message.from.username);
+    const inmate = this.helper.findOrCreateUser(msg.reply_to_message.from.username);
 
     if (!(inmate.occupation instanceof CriminalOccupation)) {
       return `${lifeUser.mentionedUserName} ${Strings.isNotInPrison(inmate.username)}`;
@@ -257,14 +234,14 @@ export class Plugin extends AbstractPlugin {
       const scoreGained = 230 * chat.getSetting<number>(HUSTLE_MULTIPLIER_SETTING);
       chat.alterUserScore(new AlterUserScoreArgs(user, scoreGained, PLUGIN_NAME, ScoreChangeReason.breakoutSucceeded));
 
-      this.addPoliceBounty(chat, user, scoreGained);
+      this.helper.addPoliceBounty(chat, user, scoreGained);
       const freedUser = chat.getOrCreateUser(msg.reply_to_message.from.id);
-      this.addPoliceBounty(chat, freedUser, scoreGained);
+      this.helper.addPoliceBounty(chat, freedUser, scoreGained);
 
       return `${lifeUser.mentionedUserName} ${Strings.didBreakOutInmate(inmate.username)}`;
     } else {
       lifeUser.incarcerate(() => {
-        const lifeChatData = this.getOrCreateLifeChatsData(chat.id);
+        const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
 
         if (!lifeChatData.usersNotTagged.includes(user.id)) {
           this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
@@ -276,7 +253,7 @@ export class Plugin extends AbstractPlugin {
 
   private bribe = (chat: Chat, user: User, msg: TelegramBot.Message, match: string): string => {
     const args = match.split(" ");
-    const inmate = this.findOrCreateUser(user.name);
+    const inmate = this.helper.findOrCreateUser(user.name);
 
     if (!(inmate.occupation instanceof CriminalOccupation)) {
       return `${inmate.mentionedUserName} ${Strings.youAreNotInPrison}`;
@@ -301,7 +278,7 @@ export class Plugin extends AbstractPlugin {
 
     if (succeeds) {
       inmate.clearOccupation();
-      this.addPoliceBounty(chat, user, amount);
+      this.helper.addPoliceBounty(chat, user, amount);
       return Strings.bribingSuccessful;
     } else {
       return Strings.bribingFailed(actualBribedAmount);
@@ -309,7 +286,7 @@ export class Plugin extends AbstractPlugin {
   }
 
   private toggleLifeTags = (chat: Chat, user: User, msg: TelegramBot.Message, match: string): string => {
-    const lifeChatData = this.getOrCreateLifeChatsData(chat.id);
+    const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
 
     if (lifeChatData.usersNotTagged.includes(user.id)) {
       lifeChatData.usersNotTagged.splice(lifeChatData.usersNotTagged.indexOf(user.id), 1);
@@ -325,11 +302,11 @@ export class Plugin extends AbstractPlugin {
   }
 
   private displayStatus = (chat: Chat, user: User): string => {
-    return this.findOrCreateUser(user.name).status;
+    return this.helper.findOrCreateUser(user.name).status;
   }
 
   private hustle = (chat: Chat, user: User): string => {
-    const lifeUser = this.findOrCreateUser(user.name);
+    const lifeUser = this.helper.findOrCreateUser(user.name);
 
     if (lifeUser.occupation) {
       return lifeUser.occupation.statusMessage(null);
@@ -342,7 +319,7 @@ export class Plugin extends AbstractPlugin {
     if (successful) {
       const scoreToGain = Random.number(60, 700) * multiplier;
       const actualScoreGained = chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, PLUGIN_NAME, ScoreChangeReason.crimeCommited));
-      this.addPoliceBounty(chat, user, scoreToGain);
+      this.helper.addPoliceBounty(chat, user, scoreToGain);
       return `${lifeUser.mentionedUserName} ${Strings.hustleSuccessful(actualScoreGained)}`;
     } else {
       lifeUser.incarcerate(() => {
@@ -355,7 +332,7 @@ export class Plugin extends AbstractPlugin {
   }
 
   private work = (chat: Chat, user: User): string => {
-    const lifeUser = this.findOrCreateUser(user.name);
+    const lifeUser = this.helper.findOrCreateUser(user.name);
 
     if (lifeUser.occupation) {
       return lifeUser.occupation.statusMessage(null);
@@ -373,102 +350,5 @@ export class Plugin extends AbstractPlugin {
     })
 
     return `${lifeUser.mentionedUserName} ${lifeUser.occupation.startMessage}`;
-  }
-
-  /// Helpers
-
-  private createBountiesString(bounties: Bounty[], chat: Chat): string {
-    if (bounties.length === 0) {
-      return '';
-    }
-    return bounties
-      .sort((a, b) => {
-        if (a.bounty > b.bounty) {
-          return -1;
-        }
-        if (a.bounty < b.bounty) {
-          return 1;
-        }
-        return 0;
-      })
-      .map((bounty) => {
-        const targetUser = chat.getOrCreateUser(bounty.userId);
-        return `${targetUser.name}: ${bounty.bounty} points`;
-      })
-      .join("\n-\t");
-  }
-
-  private addPoliceBounty(chat: Chat, user: User, bounty: number): void {
-    const lifeChatData = this.getOrCreateLifeChatsData(chat.id);
-    let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.isPoliceBounty && chatBounty.userId === user.id);
-
-    if (!chatBounty) {
-      chatBounty = { bounty: bounty, isPoliceBounty: true, userId: user.id };
-      lifeChatData.bounties.push(chatBounty);
-    } else {
-      chatBounty.bounty += bounty;
-    }
-  }
-
-  private prepareKill(chat: Chat, user: User, match: string) : { errorMsg: string, killCosts: number, targetUser: User } {
-    const lifeUser = this.findOrCreateUser(user.name);
-
-    if (lifeUser.occupation) {
-      return { errorMsg: lifeUser.occupation.statusMessage(null), killCosts: null, targetUser: null };
-    }
-    if (!match) {
-      return { errorMsg: Strings.killTooFewArgumentsError, killCosts: null, targetUser: null };
-    }
-    const parameters = match.split(' ');
-
-    if (parameters.length < 1) {
-      return { errorMsg: Strings.killTooFewArgumentsError, killCosts: null, targetUser: null };
-    }
-    const targetUser = this.getChatUserFromParameter(chat, parameters[0]);
-
-    if (targetUser === null) {
-      return { errorMsg: Strings.userDoesNotExist, killCosts: null, targetUser: null };
-    }
-    if (targetUser.id === user.id) {
-      return { errorMsg: "If you want to kill yourself, go play Russian Roulette 🙄", killCosts: null, targetUser: null };
-    }
-    const targetLifeUser = this.findOrCreateUser(targetUser.name);
-
-    if (targetLifeUser.occupation?.mayInterruptForHospitalisation === false) {
-      return { errorMsg: targetLifeUser.occupation.statusMessage(targetLifeUser.username), killCosts: null, targetUser: null };
-    }
-    const killCosts = Math.round(Math.max(user.score * 0.25 + targetUser.score * 0.25, 100));
-    
-    if (killCosts > user.score) {
-      return { errorMsg: Strings.cantSpendMoreThanYouHave, killCosts: null, targetUser: null };
-    }
-    return { errorMsg: null, killCosts: killCosts, targetUser: targetUser };
-  }
-
-  private getChatUserFromParameter(chat: Chat, parameter: string): User | null {
-    const username = parameter.replace('@', '');
-    const user = Array.from(chat.users.values()).find((u) => u.name.toLowerCase() === username.toLowerCase());
-    return user ?? null;
-  }
-
-  private findOrCreateUser(username: string): LifeUser {
-    let user = this.lifeUsers.find(u => u.username === username);
-    if (!user) {
-      this.lifeUsers.push(user = new LifeUser(username));
-    }
-    return user;
-  }
-
-  private getOrCreateLifeChatsData(chatId: number): LifeChatData {
-    let lifeChatData = this.lifeChatsData.get(chatId);
-
-    if (!lifeChatData) {
-      lifeChatData = { chatId: chatId, usersNotTagged: [], bounties: [] };
-      this.lifeChatsData.set(chatId, lifeChatData);
-    }
-    if (!lifeChatData.bounties) {
-      lifeChatData.bounties = [];
-    }
-    return lifeChatData;
   }
 }
