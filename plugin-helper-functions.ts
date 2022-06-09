@@ -73,10 +73,10 @@ export class PluginHelperFunctions {
         }
         const targetWorthModifier = chat.getSetting<number>(Strings.KILL_COST_PERCENTAGE_SETTING) / 100;
         const bountyMultiplier = chat.getSetting<number>(Strings.KILL_COST_BOUNTY_MULTIPLIER_SETTING);
-        const lifeChatData = this.getOrCreateLifeChatsData(chat.id)
+        const lifeChatData = this.getOrCreateLifeChatsData(chat.id);
 
         let killCost = targetUser.score * targetWorthModifier;
-        killCost += (this.getTotalBountyForUser(lifeChatData.bounties, targetUser.id) * bountyMultiplier);
+        killCost += (this.getTotalBountyForUser(lifeChatData.bounties, user.id) * bountyMultiplier);
         killCost = Math.round(Math.max(killCost, 100));
 
         if (killCost > user.score) {
