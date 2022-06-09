@@ -91,6 +91,7 @@ export class PluginHelperFunctions {
         return user ?? null;
     }
 
+    // TODO: Fix this so it uses user id instead of case-sensitive username.
     public findOrCreateUser(username: string): LifeUser {
         let user = this.lifeUsers.find(u => u.username === username);
         if (!user) {
@@ -103,11 +104,14 @@ export class PluginHelperFunctions {
         let lifeChatData = this.lifeChatsData.get(chatId);
 
         if (!lifeChatData) {
-            lifeChatData = { chatId: chatId, usersNotTagged: [], bounties: [] };
+            lifeChatData = { chatId: chatId, usersNotTagged: [], bounties: [], usersInHospital: [] };
             this.lifeChatsData.set(chatId, lifeChatData);
         }
         if (!lifeChatData.bounties) {
             lifeChatData.bounties = [];
+        }
+        if (!lifeChatData.usersInHospital) {
+            lifeChatData.usersInHospital = [];
         }
         return lifeChatData;
     }

@@ -6,5 +6,6 @@ import { Bounty } from "./Bounty";
 export interface LifeChatData  {
     chatId: number;
     usersNotTagged: number[];
+    usersInHospital: { userId: number; minutes: number }[]
     bounties: Bounty[];
 }

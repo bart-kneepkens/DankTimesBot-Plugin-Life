@@ -28,7 +28,17 @@ export class Plugin extends AbstractPlugin {
   constructor() {
     super(Strings.PLUGIN_NAME, "1.3.0-alpha");
     this.subscribeToPluginEvent(PluginEvent.BotStartup, this.onBotStartup.bind(this));
-    this.subscribeToPluginEvent(PluginEvent.BotShutdown, () => this.saveDataToFile(Plugin.LIFE_CHATS_DATA_FILE, this.lifeChatsData));
+    this.subscribeToPluginEvent(PluginEvent.BotShutdown, () => {
+      this.lifeChatsData.forEach((data) => {
+        data.usersInHospital.forEach((uih) => {
+          const chat = this.getChat(data.chatId);
+          const user = chat.getOrCreateUser(uih.userId);
+          const lifeUser = this.helper.findOrCreateUser(user.name);
+          uih.minutes = lifeUser.occupation.remainingTimeMinutes;
+        });
+      });
+      this.saveDataToFile(Plugin.LIFE_CHATS_DATA_FILE, this.lifeChatsData);
+    });
     this.helper = new PluginHelperFunctions(this.lifeChatsData, this.lifeUsers);
   }
 
@@ -64,7 +74,22 @@ export class Plugin extends AbstractPlugin {
 
   private onBotStartup(eventArgs: EmptyEventArguments): void {
     const chatsLifeDataArray = this.loadDataFromFile<LifeChatData[]>(Plugin.LIFE_CHATS_DATA_FILE);
-    chatsLifeDataArray?.forEach(data => this.lifeChatsData.set(data.chatId, data));
+
+    chatsLifeDataArray?.forEach(data => {
+      this.lifeChatsData.set(data.chatId, data);
+
+      data.usersInHospital.forEach((userInHospital) => {
+        const chatUser = this.getChat(data.chatId).getOrCreateUser(userInHospital.userId);
+        const lifeUser = this.helper.findOrCreateUser(chatUser.name);
+
+        lifeUser.hospitalise(userInHospital.minutes, () => {
+          if (!data.usersNotTagged.includes(chatUser.id)) {
+            this.sendMessage(data.chatId, `${lifeUser.mentionedUserName} ${Strings.releasedFromHospital}`);
+          }
+          data.usersInHospital = data.usersInHospital.filter((uih) => uih.userId !== chatUser.id);
+        });
+      });
+    });
   }
 
   /// Commands
@@ -161,7 +186,7 @@ export class Plugin extends AbstractPlugin {
     }
     const question = new BotCommandConfirmationQuestion();
     question.confirmationQuestionText = `💀 Making an attempt on ${preparation.targetUser.name}'s life will cost ${preparation.killCosts} points. Type 'yes' to confirm.`;
-    
+
     question.actionOnConfirm = () => {
       const preparation = this.helper.prepareKill(chat, user, match);
 
@@ -174,12 +199,15 @@ export class Plugin extends AbstractPlugin {
       const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser.name);
       const lifeUser = this.helper.findOrCreateUser(user.name);
 
-      if (Random.number(0, 100) >= 40) {   
-        targetLifeUser.hospitalise(chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING), () => {
+      if (Random.number(0, 100) >= 40) {
+        const minutes = chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
+        targetLifeUser.hospitalise(minutes, () => {
           if (!lifeChatData.usersNotTagged.includes(preparation.targetUser.id)) {
             this.sendMessage(chat.id, `${targetLifeUser.mentionedUserName} ${Strings.releasedFromHospital}`);
           }
+          lifeChatData.usersInHospital = lifeChatData.usersInHospital.filter((uih) => uih.userId !== preparation.targetUser.id);
         });
+        lifeChatData.usersInHospital.push({ userId: preparation.targetUser.id, minutes: minutes });
 
         let bountyReward = bounties.map((bounty) => bounty.bounty).reduce((sum, current) => sum + current, 0);
         bountyReward = chat.alterUserScore(new AlterUserScoreArgs(user, bountyReward, Strings.PLUGIN_NAME, ScoreChangeReason.receivedBounty));
