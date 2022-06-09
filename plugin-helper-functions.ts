@@ -71,13 +71,18 @@ export class PluginHelperFunctions {
         if (targetLifeUser.occupation?.mayInterruptForHospitalisation === false) {
             return { errorMsg: targetLifeUser.occupation.statusMessage(targetLifeUser.username), killCosts: null, targetUser: null };
         }
-        const killCostModifier = chat.getSetting<number>(Strings.KILL_COST_PERCENTAGE_SETTING) / 100;
-        const killCosts = Math.round(Math.max(user.score * killCostModifier + targetUser.score * killCostModifier, 100));
+        const targetWorthModifier = chat.getSetting<number>(Strings.KILL_COST_PERCENTAGE_SETTING) / 100;
+        const bountyMultiplier = chat.getSetting<number>(Strings.KILL_COST_BOUNTY_MULTIPLIER_SETTING);
+        const lifeChatData = this.getOrCreateLifeChatsData(chat.id)
 
-        if (killCosts > user.score) {
-            return { errorMsg: Strings.cantSpendMoreThanYouHave, killCosts: null, targetUser: null };
+        let killCost = targetUser.score * targetWorthModifier;
+        killCost += (this.getTotalBountyForUser(lifeChatData.bounties, targetUser.id) * bountyMultiplier);
+        killCost = Math.round(Math.max(killCost, 100));
+
+        if (killCost > user.score) {
+            return { errorMsg: Strings.cantSpendMoreThanYouHave(killCost), killCosts: null, targetUser: null };
         }
-        return { errorMsg: null, killCosts: killCosts, targetUser: targetUser };
+        return { errorMsg: null, killCosts: killCost, targetUser: targetUser };
     }
 
     public getChatUserFromParameter(chat: Chat, parameter: string): User | null {
@@ -105,5 +110,12 @@ export class PluginHelperFunctions {
             lifeChatData.bounties = [];
         }
         return lifeChatData;
+    }
+
+    public getTotalBountyForUser(bounties: Bounty[], userId: number) : number {
+        return bounties
+            .filter((bounty) => bounty.userId === userId)
+            .map((bounty) => bounty.bounty)
+            .reduce((sum, current) => sum + current, 0);
     }
 }

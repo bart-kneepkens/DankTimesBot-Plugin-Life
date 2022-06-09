@@ -56,7 +56,8 @@ export class Plugin extends AbstractPlugin {
     return [
       new ChatSettingTemplate(Strings.WORK_MULTIPLIER_SETTING, "work reward multiplier", 1, (original) => Number(original), (value) => null),
       new ChatSettingTemplate(Strings.HUSTLE_MULTIPLIER_SETTING, "hustle reward multiplier", 1, (original) => Number(original), (value) => null),
-      new ChatSettingTemplate(Strings.KILL_COST_PERCENTAGE_SETTING, "percentage of killer's points plus victim's points required to kill", 15, (original) => Number(original), (value) => null),
+      new ChatSettingTemplate(Strings.KILL_COST_PERCENTAGE_SETTING, "percentage of victim's points required to kill", 10, (original) => Number(original), (value) => null),
+      new ChatSettingTemplate(Strings.KILL_COST_BOUNTY_MULTIPLIER_SETTING, "multiplier of killer's bounty required to kill", 1, (original) => Number(original), (value) => null),
       new ChatSettingTemplate(Strings.HOSPITAL_DURATION_MINUTES_SETTING, "duration in minutes player stays in hospital after 'killed'", 60 * 8, (original) => Number(original), (value) => null),
     ];
   }
@@ -137,7 +138,7 @@ export class Plugin extends AbstractPlugin {
       return Strings.provideValidPositiveNumber;
     }
     if (user.score < bounty) {
-      return Strings.cantSpendMoreThanYouHave;
+      return Strings.cantSpendMoreThanYouHave(bounty);
     }
     const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
     let chatBounty = lifeChatData.bounties.find((chatBounty) => !chatBounty.isPoliceBounty && chatBounty.userId === targetUser.id);
@@ -180,7 +181,7 @@ export class Plugin extends AbstractPlugin {
           }
         });
 
-        let bountyReward = bounties.map((bounty) => bounty.bounty).reduce((sum, current) => sum + current);
+        let bountyReward = bounties.map((bounty) => bounty.bounty).reduce((sum, current) => sum + current, 0);
         bountyReward = chat.alterUserScore(new AlterUserScoreArgs(user, bountyReward, Strings.PLUGIN_NAME, ScoreChangeReason.receivedBounty));
 
         if (!bounties.find((bounty) => bounty.isPoliceBounty)) {
@@ -268,7 +269,7 @@ export class Plugin extends AbstractPlugin {
     const totalFunds = user.score;
 
     if (amount > totalFunds) {
-      return Strings.cantSpendMoreThanYouHave;
+      return Strings.cantSpendMoreThanYouHave(amount);
     }
     const chance = (amount / totalFunds);
     const succeeds = Math.random() < (chance * 4.2);

@@ -6,6 +6,7 @@ export class Strings {
     public static readonly WORK_MULTIPLIER_SETTING = "life.work.multiplier";
     public static readonly HUSTLE_MULTIPLIER_SETTING = "life.hustle.multiplier";
     public static readonly KILL_COST_PERCENTAGE_SETTING = "life.kill.cost.percentage";
+    public static readonly KILL_COST_BOUNTY_MULTIPLIER_SETTING = "life.kill.cost.bountymultiplier";
     public static readonly HOSPITAL_DURATION_MINUTES_SETTING = "life.hospital.duration.minutes";
 
     static minutes(value: number): string {
@@ -88,8 +89,8 @@ export class Strings {
         return "Provide a valid, positive number please ✋";
     }
 
-    static get cantSpendMoreThanYouHave(): string {
-        return "You can't spend more than you have ✋";
+    static cantSpendMoreThanYouHave(amount: number): string {
+        return `This will cost you ${amount} points, which you don't have, you filthy peasant ✋`;
     }
 
     static get bribingSuccessful(): string {
