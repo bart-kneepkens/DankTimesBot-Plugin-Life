@@ -3,7 +3,7 @@ import { Strings } from "../Strings";
 
 export class LifeUser {
 
-    public occupation: Occupation = null;
+    public occupation: Occupation | null = null;
 
     private timeOut: NodeJS.Timeout | null = null;
 
@@ -28,9 +28,9 @@ export class LifeUser {
         return Strings.youAreFree;
     }
 
-    startWork (completion: (() => void)) {
+    startWork (minutes: number, completion: (() => void)) {
         this.clearOccupation();
-        this.occupation = new WageSlaveOccupation();
+        this.occupation = new WageSlaveOccupation(minutes);
         this.setTimerForOccupation(completion);
     }
 
@@ -58,6 +58,6 @@ export class LifeUser {
         this.timeOut = setTimeout(() => {
             completion && completion();
             this.clearOccupation();
-        }, 60000 * this.occupation.waitingTime);
+        }, 60000 * (this.occupation?.waitingTime ?? 1));
     }
 }

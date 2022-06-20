@@ -104,14 +104,14 @@ export class Strings {
         return "You are currently working";
     }
 
-    static currentlyIncarcerated(userName: string = null): string {
+    static currentlyIncarcerated(userName: string | null = null): string {
         if (userName) {
             return `${userName} is currently in prison`;
         }
         return "You are currently in prison";
     }
 
-    static currentlyHospitalised(userName: string = null): string {
+    static currentlyHospitalised(userName: string | null = null): string {
         if (userName) {
             return `${userName} is currently recovering in the hospital`;
         }

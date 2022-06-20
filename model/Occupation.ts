@@ -30,8 +30,8 @@ export abstract class Occupation {
 
 export class WageSlaveOccupation extends Occupation {
 
-    constructor() {
-        super(Random.number(2, 10));
+    constructor(minutes: number) {
+        super(minutes);
     }
 
     get startMessage(): string {

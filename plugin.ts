@@ -30,11 +30,11 @@ export class Plugin extends AbstractPlugin {
     this.subscribeToPluginEvent(PluginEvent.BotStartup, this.onBotStartup.bind(this));
     this.subscribeToPluginEvent(PluginEvent.BotShutdown, () => {
       this.lifeChatsData.forEach((data) => {
-        data.usersInHospital.forEach((uih) => {
+        data.usersInHospital?.forEach((uih) => {
           const chat = this.getChat(data.chatId);
-          const user = chat.getOrCreateUser(uih.userId);
+          const user = chat!.getOrCreateUser(uih.userId);
           const lifeUser = this.helper.findOrCreateUser(user.name);
-          uih.minutes = lifeUser.occupation.remainingTimeMinutes;
+          uih.minutes = lifeUser.occupation!.remainingTimeMinutes;
         });
       });
       this.saveDataToFile(Plugin.LIFE_CHATS_DATA_FILE, this.lifeChatsData);
@@ -78,15 +78,15 @@ export class Plugin extends AbstractPlugin {
     chatsLifeDataArray?.forEach(data => {
       this.lifeChatsData.set(data.chatId, data);
 
-      data.usersInHospital.forEach((userInHospital) => {
-        const chatUser = this.getChat(data.chatId).getOrCreateUser(userInHospital.userId);
+      data.usersInHospital?.forEach((userInHospital) => {
+        const chatUser = this.getChat(data.chatId)!.getOrCreateUser(userInHospital.userId);
         const lifeUser = this.helper.findOrCreateUser(chatUser.name);
 
         lifeUser.hospitalise(userInHospital.minutes, () => {
           if (!data.usersNotTagged.includes(chatUser.id)) {
             this.sendMessage(data.chatId, `${lifeUser.mentionedUserName} ${Strings.releasedFromHospital}`);
           }
-          data.usersInHospital = data.usersInHospital.filter((uih) => uih.userId !== chatUser.id);
+          data.usersInHospital = (data.usersInHospital ?? []).filter((uih) => uih.userId !== chatUser.id);
         });
       });
     });
@@ -228,7 +228,7 @@ export class Plugin extends AbstractPlugin {
             this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
           }
         });
-        return `😞 ${lifeUser.mentionedUserName} failed to kill ${targetLifeUser.mentionedUserName} and has been imprisoned for ${Strings.minutes(lifeUser.occupation.waitingTime)} for the unlawful attempt 👮🏻`;
+        return `😞 ${lifeUser.mentionedUserName} failed to kill ${targetLifeUser.mentionedUserName} and has been imprisoned for ${Strings.minutes(lifeUser.occupation!.waitingTime)} for the unlawful attempt 👮🏻`;
       }
       return `😞 ${lifeUser.mentionedUserName} failed to kill ${targetLifeUser.mentionedUserName}. They live to shitpost another day 🌞`;
     };
@@ -248,7 +248,7 @@ export class Plugin extends AbstractPlugin {
       return Strings.breakoutYourself;
     }
 
-    const inmate = this.helper.findOrCreateUser(msg.reply_to_message.from.username);
+    const inmate = this.helper.findOrCreateUser(msg.reply_to_message.from.username!);
 
     if (!(inmate.occupation instanceof CriminalOccupation)) {
       return `${lifeUser.mentionedUserName} ${Strings.isNotInPrison(inmate.username)}`;
@@ -274,7 +274,7 @@ export class Plugin extends AbstractPlugin {
           this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
         }
       });
-      return `${lifeUser.mentionedUserName} ${Strings.breakoutFailed(lifeUser.occupation.waitingTime)}`;
+      return `${lifeUser.mentionedUserName} ${Strings.breakoutFailed(lifeUser.occupation!.waitingTime)}`;
     }
   }
 
@@ -354,28 +354,41 @@ export class Plugin extends AbstractPlugin {
           this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
         }
       });
-      return `${lifeUser.mentionedUserName} ${lifeUser.occupation.startMessage}`
+      return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`
     }
   }
 
-  private work = (chat: Chat, user: User): string => {
+  private work = (chat: Chat, user: User, msg: TelegramBot.Message, params: string): string => {
     const lifeUser = this.helper.findOrCreateUser(user.name);
 
     if (lifeUser.occupation) {
       return lifeUser.occupation.statusMessage(null);
     }
+    let minutes: number;
 
+    if (params) {
+      minutes = Number(params);
+
+      if (isNaN(minutes) || minutes < 1) {
+        return `'${params}' is not a valid number of minutes 🙄`;
+      }
+      if (minutes > 60) {
+        return `If you really want to work that hard then close this chat already 😤`;
+      }
+    } else {
+      minutes = Random.number(2, 10);
+    }
     const multiplier: number = chat.getSetting(Strings.WORK_MULTIPLIER_SETTING);
-
-    lifeUser.startWork(() => {
-      let scoreToGain = lifeUser.occupation.waitingTime * 20 * multiplier;
+    
+    lifeUser.startWork(minutes, () => {
+      let scoreToGain = lifeUser.occupation!.waitingTime * 20 * multiplier;
       scoreToGain = chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, Strings.PLUGIN_NAME, ScoreChangeReason.workCompleted));
 
       if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
         this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.doneWorking(scoreToGain)}`);
       }
-    })
+    });
 
-    return `${lifeUser.mentionedUserName} ${lifeUser.occupation.startMessage}`;
+    return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
   }
 }
