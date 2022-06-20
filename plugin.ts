@@ -198,6 +198,7 @@ export class Plugin extends AbstractPlugin {
       const bounties = lifeChatData.bounties.filter((bounty) => bounty.userId === preparation.targetUser.id);
       const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser.name);
       const lifeUser = this.helper.findOrCreateUser(user.name);
+      const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser.id) ? targetLifeUser.username: targetLifeUser.mentionedUserName;
 
       if (Random.number(0, 100) >= 40) {
         const minutes = chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
@@ -217,7 +218,7 @@ export class Plugin extends AbstractPlugin {
           this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKilling);
         }
         bounties.forEach((bounty) => lifeChatData.bounties.splice(lifeChatData.bounties.indexOf(bounty), 1));
-        return `💀 @${user.name} has mortally wounded ${targetLifeUser.mentionedUserName} and claimed a ${bountyReward} points bounty!`;
+        return `💀 @${user.name} has mortally wounded ${woundedUsername} and claimed a ${bountyReward} points bounty!`;
 
       } else if (!bounties.find((bounty) => bounty.isPoliceBounty)) {
         const bountyForUnlawfulKillingAttempt = 350 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
@@ -228,9 +229,9 @@ export class Plugin extends AbstractPlugin {
             this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
           }
         });
-        return `😞 ${lifeUser.mentionedUserName} failed to kill ${targetLifeUser.mentionedUserName} and has been imprisoned for ${Strings.minutes(lifeUser.occupation!.waitingTime)} for the unlawful attempt 👮🏻`;
+        return `😞 ${lifeUser.mentionedUserName} failed to kill ${woundedUsername} and has been imprisoned for ${Strings.minutes(lifeUser.occupation!.waitingTime)} for the unlawful attempt 👮🏻`;
       }
-      return `😞 ${lifeUser.mentionedUserName} failed to kill ${targetLifeUser.mentionedUserName}. They live to shitpost another day 🌞`;
+      return `😞 ${lifeUser.mentionedUserName} failed to kill ${woundedUsername}. They live to shitpost another day 🌞`;
     };
     return question;
   }
