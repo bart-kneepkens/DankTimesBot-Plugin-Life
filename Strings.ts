@@ -126,7 +126,7 @@ export class Strings {
         return "🍋 Life - Choose your destiny 🍋 \n\n"
         + `/${Commands.status} - To see how life is looking for you\n`
         + `/${Commands.work} - To earn money the safe (and boring) way\n`
-        + `/${Commands.crime} - To earn money the gangster way - you may end up in prison!\n` 
+        + `/${Commands.crime1} | /${Commands.crime2} | /${Commands.crime3} - To earn money the gangster way - you may end up in prison!\n` 
         + `/${Commands.office} - See who's in the office\n`
         + `/${Commands.hospital} - See who's in the hospital\n`
         + `/${Commands.prison} - See who's locked up in prison\n`

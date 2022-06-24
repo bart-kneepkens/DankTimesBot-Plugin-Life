@@ -47,7 +47,9 @@ export class Plugin extends AbstractPlugin {
     const lifeCommand = new BotCommand([Commands.life], `Display info about the ${Strings.PLUGIN_NAME} plugin`, this.displayPluginInfo.bind(this), true);
     const statusCommand = new BotCommand([Commands.status], "", this.displayStatus.bind(this), false);
     const workCommand = new BotCommand([Commands.work], "", this.work.bind(this), false);
-    const crimeCommand = new BotCommand([Commands.crime], "", this.hustle.bind(this), false);
+    const crime1Command = new BotCommand([Commands.crime1], "", this.hustle.bind(this), false);
+    const crime2Command = new BotCommand([Commands.crime2], "", this.hustle.bind(this), false);
+    const crime3Command = new BotCommand([Commands.crime3], "", this.hustle.bind(this), false);
     const breakoutCommand = new BotCommand([Commands.breakout], "", this.breakOut.bind(this), false);
     const officeCommand = new BotCommand([Commands.office], "", this.describeOffice.bind(this), false);
     const prisonCommand = new BotCommand([Commands.prison], "", this.describePrison.bind(this), false);
@@ -57,7 +59,7 @@ export class Plugin extends AbstractPlugin {
     const bountiesCommand = new BotCommand([Commands.bounties], "", this.bounties.bind(this), false);
     const placeBountyCommand = new BotCommand([Commands.placebounty], "", this.placeBounty.bind(this), false);
     const killPlayerCommand = new BotCommand([Commands.kill], "", this.kill.bind(this), false);
-    return [lifeCommand, statusCommand, workCommand, crimeCommand, breakoutCommand, officeCommand, prisonCommand, bribeCommand, togglelifetagsCommand,
+    return [lifeCommand, statusCommand, workCommand, crime1Command, crime2Command, crime3Command, breakoutCommand, officeCommand, prisonCommand, bribeCommand, togglelifetagsCommand,
       hospitalCommand, bountiesCommand, placeBountyCommand, killPlayerCommand];
   }
 
