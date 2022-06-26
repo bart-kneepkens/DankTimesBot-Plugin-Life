@@ -47,7 +47,7 @@ export class Plugin extends AbstractPlugin {
     const lifeCommand = new BotCommand([Commands.life], `Display info about the ${Strings.PLUGIN_NAME} plugin`, this.displayPluginInfo.bind(this), true);
     const statusCommand = new BotCommand([Commands.status], "", this.displayStatus.bind(this), false);
     const workCommand = new BotCommand([Commands.work], "", this.work.bind(this), false);
-    const crimeCommand = new BotCommand([Commands.crime], "", this.hustle.bind(this), false);
+    const crimeCommand = new BotCommand([Commands.crime1, Commands.crime2, Commands.crime3], "", this.hustle.bind(this), false);
     const breakoutCommand = new BotCommand([Commands.breakout], "", this.breakOut.bind(this), false);
     const officeCommand = new BotCommand([Commands.office], "", this.describeOffice.bind(this), false);
     const prisonCommand = new BotCommand([Commands.prison], "", this.describePrison.bind(this), false);
