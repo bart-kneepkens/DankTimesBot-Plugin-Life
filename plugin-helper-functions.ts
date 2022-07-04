@@ -27,20 +27,26 @@ export class PluginHelperFunctions {
             })
             .map((bounty) => {
                 const targetUser = chat.getOrCreateUser(bounty.userId);
-                return `${targetUser.name}: ${bounty.bounty} points`;
+                let line = `${targetUser.name}: ${bounty.bounty} points`;
+
+                if (bounty.isPoliceBounty) {
+                    line += " [ 🚓 ]";
+                }
+                return line;
             })
             .join("\n-\t");
     }
 
     public addPoliceBounty(chat: Chat, user: User, bounty: number): void {
         const lifeChatData = this.getOrCreateLifeChatsData(chat.id);
-        let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.isPoliceBounty && chatBounty.userId === user.id);
+        let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.userId === user.id);
 
         if (!chatBounty) {
             chatBounty = { bounty: Math.round(bounty), isPoliceBounty: true, userId: user.id };
             lifeChatData.bounties.push(chatBounty);
         } else {
             chatBounty.bounty = Math.round(chatBounty.bounty + bounty);
+            chatBounty.isPoliceBounty = true;
         }
     }
 

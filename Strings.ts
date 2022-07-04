@@ -49,12 +49,8 @@ export class Strings {
         return "🏥 <b> Hospital patients </b> 🏥";
     }
 
-    static get policeBounties(): string {
-        return "📃 <b> Police bounties </b> 📃"
-    }
-
-    static get playerBounties(): string {
-        return "📃 <b> Player bounties </b> 📃"
+    static get bounties(): string {
+        return "📃 <b> Bounties </b> 📃"
     }
 
     static get placeBountyTooFewArgumentsError(): string {

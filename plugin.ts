@@ -16,6 +16,7 @@ import { BotCommandConfirmationQuestion } from "../../src/bot-commands/bot-comma
 import { PluginHelperFunctions } from "./plugin-helper-functions";
 import { Commands } from "./model/Commands";
 import { ScoreChangeReason } from "./model/ScoreChangeReason";
+import { Bounty } from "./model/Bounty";
 
 export class Plugin extends AbstractPlugin {
 
@@ -78,6 +79,28 @@ export class Plugin extends AbstractPlugin {
     chatsLifeDataArray?.forEach(data => {
       this.lifeChatsData.set(data.chatId, data);
 
+      // Correct bounties
+      const correctedBounties: Bounty[] = [];
+
+      for (let bounty of data.bounties ?? []) {
+        const existingBountyForUser = correctedBounties.find((bountyToFind) => bountyToFind.userId === bounty.userId);
+
+        if (existingBountyForUser) {
+          existingBountyForUser.bounty += bounty.bounty;
+          existingBountyForUser.isPoliceBounty ||= bounty.isPoliceBounty;
+
+        } else {
+          const newBounty: Bounty = {
+            userId: bounty.userId,
+            bounty: bounty.bounty,
+            isPoliceBounty: bounty.isPoliceBounty
+          };
+          correctedBounties.push(newBounty);
+        }
+      }
+      data.bounties = correctedBounties;
+
+      // Apply hospitalisations
       data.usersInHospital?.forEach((userInHospital) => {
         const chatUser = this.getChat(data.chatId)!.getOrCreateUser(userInHospital.userId);
         const lifeUser = this.helper.findOrCreateUser(chatUser.name);
@@ -124,23 +147,8 @@ export class Plugin extends AbstractPlugin {
     if (lifeChatData.bounties.length == 0) {
       return 'There are no active bounties..';
     }
-    const policeBounties = lifeChatData.bounties.filter((bounty) => bounty.isPoliceBounty);
-    const playerBounties = lifeChatData.bounties.filter((bounty) => !bounty.isPoliceBounty);
-
-    const policeBountiesStr = this.helper.createBountiesString(policeBounties, chat);
-    const playerBountiesStr = this.helper.createBountiesString(playerBounties, chat);
-    let bountyStr = '';
-
-    if (policeBountiesStr.length > 0) {
-      bountyStr += `${Strings.policeBounties}\n-\t${policeBountiesStr}`;
-    }
-    if (playerBountiesStr.length > 0) {
-      if (bountyStr.length > 0) {
-        bountyStr += `\n\n`;
-      }
-      bountyStr += `${Strings.playerBounties}\n-\t${playerBountiesStr}`;
-    }
-    return bountyStr;
+    const bountiesStr = this.helper.createBountiesString(lifeChatData.bounties, chat);
+    return `${Strings.bounties}\n-\t${bountiesStr}`;
   }
 
   private placeBounty(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {
@@ -166,7 +174,7 @@ export class Plugin extends AbstractPlugin {
       return Strings.cantSpendMoreThanYouHave(bounty);
     }
     const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
-    let chatBounty = lifeChatData.bounties.find((chatBounty) => !chatBounty.isPoliceBounty && chatBounty.userId === targetUser.id);
+    let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.userId === targetUser.id);
 
     if (!chatBounty) {
       chatBounty = { bounty: bounty, isPoliceBounty: false, userId: targetUser.id };
@@ -195,10 +203,10 @@ export class Plugin extends AbstractPlugin {
       }
       chat.alterUserScore(new AlterUserScoreArgs(user, -preparation.killCosts, Strings.PLUGIN_NAME, ScoreChangeReason.killPlayer));
       const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
-      const bounties = lifeChatData.bounties.filter((bounty) => bounty.userId === preparation.targetUser.id);
+      const bounty = lifeChatData.bounties.find((bounty) => bounty.userId === preparation.targetUser.id);
       const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser.name);
       const lifeUser = this.helper.findOrCreateUser(user.name);
-      const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser.id) ? targetLifeUser.username: targetLifeUser.mentionedUserName;
+      const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser.id) ? targetLifeUser.username : targetLifeUser.mentionedUserName;
 
       if (Random.number(0, 100) >= 40) {
         const minutes = chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
@@ -210,17 +218,17 @@ export class Plugin extends AbstractPlugin {
         });
         lifeChatData.usersInHospital.push({ userId: preparation.targetUser.id, minutes: minutes });
 
-        let bountyReward = bounties.map((bounty) => bounty.bounty).reduce((sum, current) => sum + current, 0);
+        let bountyReward = bounty.bounty;
         bountyReward = chat.alterUserScore(new AlterUserScoreArgs(user, bountyReward, Strings.PLUGIN_NAME, ScoreChangeReason.receivedBounty));
 
-        if (!bounties.find((bounty) => bounty.isPoliceBounty)) {
+        if (!bounty.isPoliceBounty) {
           const bountyForUnlawfulKilling = 700 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
           this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKilling);
         }
-        bounties.forEach((bounty) => lifeChatData.bounties.splice(lifeChatData.bounties.indexOf(bounty), 1));
+        lifeChatData.bounties.splice(lifeChatData.bounties.indexOf(bounty), 1);
         return `💀 @${user.name} has mortally wounded ${woundedUsername} and claimed a ${bountyReward} points bounty!`;
 
-      } else if (!bounties.find((bounty) => bounty.isPoliceBounty)) {
+      } else if (!bounty.isPoliceBounty) {
         const bountyForUnlawfulKillingAttempt = 350 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
         this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKillingAttempt);
 
@@ -380,7 +388,7 @@ export class Plugin extends AbstractPlugin {
       minutes = Random.number(2, 10);
     }
     const multiplier: number = chat.getSetting(Strings.WORK_MULTIPLIER_SETTING);
-    
+
     lifeUser.startWork(minutes, () => {
       let scoreToGain = lifeUser.occupation!.waitingTime * 20 * multiplier;
       scoreToGain = chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, Strings.PLUGIN_NAME, ScoreChangeReason.workCompleted));
