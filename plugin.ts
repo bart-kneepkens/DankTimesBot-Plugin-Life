@@ -218,17 +218,17 @@ export class Plugin extends AbstractPlugin {
         });
         lifeChatData.usersInHospital.push({ userId: preparation.targetUser.id, minutes: minutes });
 
-        let bountyReward = bounty.bounty;
+        let bountyReward = !!bounty ? bounty.bounty : 0;
         bountyReward = chat.alterUserScore(new AlterUserScoreArgs(user, bountyReward, Strings.PLUGIN_NAME, ScoreChangeReason.receivedBounty));
 
-        if (!bounty.isPoliceBounty) {
+        if (!bounty || !bounty.isPoliceBounty) {
           const bountyForUnlawfulKilling = 700 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
           this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKilling);
         }
         lifeChatData.bounties.splice(lifeChatData.bounties.indexOf(bounty), 1);
         return `💀 @${user.name} has mortally wounded ${woundedUsername} and claimed a ${bountyReward} points bounty!`;
 
-      } else if (!bounty.isPoliceBounty) {
+      } else if (!bounty || !bounty.isPoliceBounty) {
         const bountyForUnlawfulKillingAttempt = 350 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
         this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKillingAttempt);
 
