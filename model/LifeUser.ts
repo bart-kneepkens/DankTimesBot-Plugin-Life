@@ -17,7 +17,8 @@ export class LifeUser {
     get buildingEntry(): string {
         if (this.occupation) {
             const minutes = Strings.minutes(this.occupation.remainingTimeMinutes);
-            return `${this.user.name} (${minutes})`;
+            const avatar = this.user.currentAvatar ? `${this.user.currentAvatar}  ` : "";
+            return `${avatar}${this.user.name} (${minutes})`;
         }
         return "";
     }

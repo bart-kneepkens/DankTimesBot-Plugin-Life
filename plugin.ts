@@ -122,7 +122,7 @@ export class Plugin extends AbstractPlugin {
     if (entries.length == 0) {
       return Strings.officeEmpty;
     }
-    return `${Strings.workingAtTheOffice}\n-\t` + entries.join("\n-\t");
+    return `${Strings.workingAtTheOffice}\n\n-\t` + entries.join("\n-\t");
   }
 
   private describePrison = (): string => {
@@ -130,7 +130,7 @@ export class Plugin extends AbstractPlugin {
     if (entries.length == 0) {
       return Strings.prisonEmpty;
     }
-    return `${Strings.currentlyInPrison}\n-\t` + entries.join("\n-\t");
+    return `${Strings.currentlyInPrison}\n\n-\t` + entries.join("\n-\t");
   }
 
   private describeHospital(): string {
@@ -138,7 +138,7 @@ export class Plugin extends AbstractPlugin {
     if (entries.length == 0) {
       return Strings.hospitalEmpty;
     }
-    return `${Strings.currentlyInHospital}\n-\t` + entries.join("\n-\t");
+    return `${Strings.currentlyInHospital}\n\n-\t` + entries.join("\n-\t");
   }
 
   private bounties(chat: Chat, user: User): string {
@@ -148,7 +148,7 @@ export class Plugin extends AbstractPlugin {
       return 'There are no active bounties..';
     }
     const bountiesStr = this.helper.createBountiesString(lifeChatData.bounties, chat);
-    return `${Strings.bounties}\n-\t${bountiesStr}`;
+    return `${Strings.bounties}\n\n-\t${bountiesStr}`;
   }
 
   private placeBounty(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string {

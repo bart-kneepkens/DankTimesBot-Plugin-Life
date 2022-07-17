@@ -27,7 +27,8 @@ export class PluginHelperFunctions {
             })
             .map((bounty) => {
                 const targetUser = chat.getOrCreateUser(bounty.userId);
-                let line = `${targetUser.name}: ${bounty.bounty} points`;
+                const avatar = targetUser.currentAvatar ? `${targetUser.currentAvatar}  ` : "";
+                let line = `${avatar}${targetUser.name}: ${bounty.bounty} points`;
 
                 if (bounty.isPoliceBounty) {
                     line += " [ 🚓 ]";
