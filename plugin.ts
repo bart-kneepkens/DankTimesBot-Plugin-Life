@@ -34,7 +34,7 @@ export class Plugin extends AbstractPlugin {
         data.usersInHospital?.forEach((uih) => {
           const chat = this.getChat(data.chatId);
           const user = chat!.getOrCreateUser(uih.userId);
-          const lifeUser = this.helper.findOrCreateUser(user.name);
+          const lifeUser = this.helper.findOrCreateUser(user);
           uih.minutes = lifeUser.occupation!.remainingTimeMinutes;
         });
       });
@@ -103,7 +103,7 @@ export class Plugin extends AbstractPlugin {
       // Apply hospitalisations
       data.usersInHospital?.forEach((userInHospital) => {
         const chatUser = this.getChat(data.chatId)!.getOrCreateUser(userInHospital.userId);
-        const lifeUser = this.helper.findOrCreateUser(chatUser.name);
+        const lifeUser = this.helper.findOrCreateUser(chatUser);
 
         lifeUser.hospitalise(userInHospital.minutes, () => {
           if (!data.usersNotTagged.includes(chatUser.id)) {
@@ -204,9 +204,9 @@ export class Plugin extends AbstractPlugin {
       chat.alterUserScore(new AlterUserScoreArgs(user, -preparation.killCosts, Strings.PLUGIN_NAME, ScoreChangeReason.killPlayer));
       const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
       const bounty = lifeChatData.bounties.find((bounty) => bounty.userId === preparation.targetUser.id);
-      const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser.name);
-      const lifeUser = this.helper.findOrCreateUser(user.name);
-      const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser.id) ? targetLifeUser.username : targetLifeUser.mentionedUserName;
+      const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser);
+      const lifeUser = this.helper.findOrCreateUser(user);
+      const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser.id) ? targetLifeUser.user.name : targetLifeUser.mentionedUserName;
 
       if (Random.number(0, 100) >= 40) {
         const minutes = chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
@@ -245,7 +245,7 @@ export class Plugin extends AbstractPlugin {
   }
 
   private breakOut = (chat: Chat, user: User, msg: TelegramBot.Message): string => {
-    const lifeUser = this.helper.findOrCreateUser(user.name);
+    const lifeUser = this.helper.findOrCreateUser(user);
 
     if (lifeUser.occupation) {
       return lifeUser.occupation.statusMessage(null);
@@ -257,10 +257,11 @@ export class Plugin extends AbstractPlugin {
       return Strings.breakoutYourself;
     }
 
-    const inmate = this.helper.findOrCreateUser(msg.reply_to_message.from.username!);
+    const inmateUser = chat.getOrCreateUser(msg.reply_to_message.from.id);
+    const inmate = this.helper.findOrCreateUser(inmateUser);
 
     if (!(inmate.occupation instanceof CriminalOccupation)) {
-      return `${lifeUser.mentionedUserName} ${Strings.isNotInPrison(inmate.username)}`;
+      return `${lifeUser.mentionedUserName} ${Strings.isNotInPrison(inmate.user.name)}`;
     }
 
     let successful = Math.random() >= 0.35;
@@ -274,7 +275,7 @@ export class Plugin extends AbstractPlugin {
       const freedUser = chat.getOrCreateUser(msg.reply_to_message.from.id);
       this.helper.addPoliceBounty(chat, freedUser, scoreGained);
 
-      return `${lifeUser.mentionedUserName} ${Strings.didBreakOutInmate(inmate.username)}`;
+      return `${lifeUser.mentionedUserName} ${Strings.didBreakOutInmate(inmate.user.name)}`;
     } else {
       lifeUser.incarcerate(() => {
         const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
@@ -289,7 +290,7 @@ export class Plugin extends AbstractPlugin {
 
   private bribe = (chat: Chat, user: User, msg: TelegramBot.Message, match: string): string => {
     const args = match.split(" ");
-    const inmate = this.helper.findOrCreateUser(user.name);
+    const inmate = this.helper.findOrCreateUser(user);
 
     if (!(inmate.occupation instanceof CriminalOccupation)) {
       return `${inmate.mentionedUserName} ${Strings.youAreNotInPrison}`;
@@ -338,11 +339,11 @@ export class Plugin extends AbstractPlugin {
   }
 
   private displayStatus = (chat: Chat, user: User): string => {
-    return this.helper.findOrCreateUser(user.name).status;
+    return this.helper.findOrCreateUser(user).status;
   }
 
   private hustle = (chat: Chat, user: User): string => {
-    const lifeUser = this.helper.findOrCreateUser(user.name);
+    const lifeUser = this.helper.findOrCreateUser(user);
 
     if (lifeUser.occupation) {
       return lifeUser.occupation.statusMessage(null);
@@ -368,7 +369,7 @@ export class Plugin extends AbstractPlugin {
   }
 
   private work = (chat: Chat, user: User, msg: TelegramBot.Message, params: string): string => {
-    const lifeUser = this.helper.findOrCreateUser(user.name);
+    const lifeUser = this.helper.findOrCreateUser(user);
 
     if (lifeUser.occupation) {
       return lifeUser.occupation.statusMessage(null);

@@ -51,7 +51,7 @@ export class PluginHelperFunctions {
     }
 
     public prepareKill(chat: Chat, user: User, match: string): { errorMsg: string, killCosts: number, targetUser: User } {
-        const lifeUser = this.findOrCreateUser(user.name);
+        const lifeUser = this.findOrCreateUser(user);
 
         if (lifeUser.occupation) {
             return { errorMsg: lifeUser.occupation.statusMessage(null), killCosts: null, targetUser: null };
@@ -72,10 +72,10 @@ export class PluginHelperFunctions {
         if (targetUser.id === user.id) {
             return { errorMsg: "If you want to kill yourself, go play Russian Roulette 🙄", killCosts: null, targetUser: null };
         }
-        const targetLifeUser = this.findOrCreateUser(targetUser.name);
+        const targetLifeUser = this.findOrCreateUser(targetUser);
 
         if (targetLifeUser.occupation?.mayInterruptForHospitalisation === false) {
-            return { errorMsg: targetLifeUser.occupation.statusMessage(targetLifeUser.username), killCosts: null, targetUser: null };
+            return { errorMsg: targetLifeUser.occupation.statusMessage(targetLifeUser.user.name), killCosts: null, targetUser: null };
         }
         const targetWorthModifier = chat.getSetting<number>(Strings.KILL_COST_PERCENTAGE_SETTING) / 100;
         const bountyMultiplier = chat.getSetting<number>(Strings.KILL_COST_BOUNTY_MULTIPLIER_SETTING);
@@ -97,11 +97,10 @@ export class PluginHelperFunctions {
         return user ?? null;
     }
 
-    // TODO: Fix this so it uses user id instead of case-sensitive username.
-    public findOrCreateUser(username: string): LifeUser {
-        let user = this.lifeUsers.find(u => u.username === username);
+    public findOrCreateUser(chatUser: User): LifeUser {
+        let user = this.lifeUsers.find(u => u.user === chatUser);
         if (!user) {
-            this.lifeUsers.push(user = new LifeUser(username));
+            this.lifeUsers.push(user = new LifeUser(chatUser));
         }
         return user;
     }

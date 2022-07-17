@@ -1,5 +1,6 @@
 import { Occupation, WageSlaveOccupation, CriminalOccupation, HospitalisedOccupation } from "./Occupation";
 import { Strings } from "../Strings";
+import { User } from "../../../src/chat/user/user";
 
 export class LifeUser {
 
@@ -7,16 +8,16 @@ export class LifeUser {
 
     private timeOut: NodeJS.Timeout | null = null;
 
-    constructor(public username: string) { }
+    constructor(public user: User) { }
 
     get mentionedUserName(): string {
-        return "@" + this.username;
+        return "@" + this.user.name;
     }
 
     get buildingEntry(): string {
         if (this.occupation) {
             const minutes = Strings.minutes(this.occupation.remainingTimeMinutes);
-            return `${this.username} (${minutes})`;
+            return `${this.user.name} (${minutes})`;
         }
         return "";
     }
