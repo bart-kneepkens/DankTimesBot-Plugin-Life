@@ -8,6 +8,8 @@ export class Strings {
     public static readonly KILL_COST_PERCENTAGE_SETTING = "life.kill.cost.percentage";
     public static readonly KILL_COST_BOUNTY_MULTIPLIER_SETTING = "life.kill.cost.bountymultiplier";
     public static readonly HOSPITAL_DURATION_MINUTES_SETTING = "life.hospital.duration.minutes";
+    public static readonly CS_MULTIPLIER_SETTING = "life.cs.multiplier";
+	
 
     static minutes(value: number): string {
         if (value < 1) {
@@ -177,4 +179,20 @@ export class Strings {
     static placedBounty(bountyPlacer: string, bounty: number, bountyTarget: string): string {
         return `📃 @${bountyPlacer} put a bounty worth ${bounty} points on @${bountyTarget} !`;
     }
+    
+    static currentlyCSuserName: string | null = null): string {
+        if (userName) {
+            return `${userName} is currently doing community service`;
+        }
+        return "You are currently doing community service";
+    }
+
+    static startedCS(minutesLeft: number): string {
+        return `You started doing community service. You'll get your reward in ${Strings.minutes(minutesLeft)}`;
+    }
+	
+    static doneCS(reward: number): string {
+        return `You're done with community service and reduced your bounty by ${reward} points!`;
+    }
+
 }
