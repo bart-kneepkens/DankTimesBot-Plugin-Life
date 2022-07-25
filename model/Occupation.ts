@@ -71,4 +71,19 @@ export class HospitalisedOccupation extends Occupation {
     statusMessage(userName: string | null): string {
         return `${Strings.currentlyHospitalised(userName)} ${this.timeRemainingAsString } 🏥`;
     }
+    
+ export class GoodSamaritanOccupation extends Occupation {
+
+    constructor(minutes: number) {
+        super(minutes);
+    }
+
+    get startMessage(): string {
+        return Strings.startedCS(this.remainingTimeMinutes);
+    }
+
+    statusMessage(userName: string | null): string {
+        return `${Strings.currentlyCS(userName)} ${this.timeRemainingAsString} 🏢`;
+    }
+}
 }
