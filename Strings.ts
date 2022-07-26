@@ -133,7 +133,7 @@ export class Strings {
         + `/${Commands.placebounty} - Place a bounty on a player\n`
         + `/${Commands.kill} - Attempt to kill a player to claim their bounty\n`
         + `/${Commands.togglelifetags} - Toggles if you are tagged whenever you are done working or completed your sentence`;
-		+ `/${Command.communityService} - Perform community service to reduce your bounty`;
+	+ `/${Command.communityService} - Perform community service to reduce your bounty`;
     } 
 
     static get releasedFromJail(): string {
