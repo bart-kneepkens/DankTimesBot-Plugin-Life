@@ -445,4 +445,19 @@ export class Plugin extends AbstractPlugin {
 
     return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
   }
+
+  export class GoodSamaritanOccupation extends Occupation {
+
+    constructor(minutes: number) {
+        super(minutes);
+    }
+
+    get startMessage(): string {
+        return Strings.startedCS(this.remainingTimeMinutes);
+    }
+
+    statusMessage(userName: string | null): string {
+        return `${Strings.currentlyCS(userName)} ${this.timeRemainingAsString} 🏢`;
+    }
+}
 }
