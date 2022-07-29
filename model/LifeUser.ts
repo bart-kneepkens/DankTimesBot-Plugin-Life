@@ -1,4 +1,4 @@
-import { Occupation, WageSlaveOccupation, CriminalOccupation, HospitalisedOccupation } from "./Occupation";
+import { Occupation, WageSlaveOccupation, CriminalOccupation, HospitalisedOccupation, GoodSamaritanOccupation } from "./Occupation";
 import { Strings } from "../Strings";
 import { User } from "../../../src/chat/user/user";
 
@@ -61,5 +61,11 @@ export class LifeUser {
             completion && completion();
             this.clearOccupation();
         }, 60000 * (this.occupation?.waitingTime ?? 1));
+    }
+
+    startCommunityService (minutes: number, completion: (() => void)) {
+        this.clearOccupation();
+        this.occupation = new GoodSamaritanOccupation(minutes);
+        this.setTimerForOccupation(completion);
     }
 }

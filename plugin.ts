@@ -2,7 +2,7 @@ import { BotCommand } from "../../src/bot-commands/bot-command";
 import { Chat } from "../../src/chat/chat";
 import { User } from "../../src/chat/user/user";
 import { AbstractPlugin } from "../../src/plugin-host/plugin/plugin";
-import { WageSlaveOccupation, CriminalOccupation, HospitalisedOccupation } from "./model/Occupation";
+import { WageSlaveOccupation, CriminalOccupation, HospitalisedOccupation, GoodSamaritanOccupation } from "./model/Occupation";
 import { LifeUser } from "./model/LifeUser";
 import { AlterUserScoreArgs } from "../../src/chat/alter-user-score-args";
 import { Strings } from './Strings';
@@ -58,8 +58,9 @@ export class Plugin extends AbstractPlugin {
     const bountiesCommand = new BotCommand([Commands.bounties], "", this.bounties.bind(this), false);
     const placeBountyCommand = new BotCommand([Commands.placebounty], "", this.placeBounty.bind(this), false);
     const killPlayerCommand = new BotCommand([Commands.kill], "", this.kill.bind(this), false);
+    const communityServiceCommand = new BotCommand([Commands.cs1, Commands.cs2], "", this.communityService.bind(this), false);
     return [lifeCommand, statusCommand, workCommand, crimeCommand, breakoutCommand, officeCommand, prisonCommand, bribeCommand, togglelifetagsCommand,
-      hospitalCommand, bountiesCommand, placeBountyCommand, killPlayerCommand];
+      hospitalCommand, bountiesCommand, placeBountyCommand, killPlayerCommand, communityServiceCommand];
   }
 
   /// Override
@@ -401,4 +402,50 @@ export class Plugin extends AbstractPlugin {
 
     return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
   }
+
+  private communityService = (chat: Chat, user: User, msg: TelegramBot.Message, params: string): string => {
+    const lifeUser = this.helper.findOrCreateUser(user);
+
+    if (lifeUser.occupation) {
+      return lifeUser.occupation.statusMessage(null);
+    }
+    let minutes: number;
+
+    if (params) {
+      minutes = Number(params);
+
+      if (isNaN(minutes) || minutes < 1) {
+        return `'${params}' is not a valid number of minutes 🙄`;
+      }
+      if (minutes > 60) {
+        return `Maybe start actually improving the community rather than spending time on afk 😤`;
+      }
+    } else {
+      minutes = Random.number(2, 10);
+    }
+    const multiplier: number = chat.getSetting(Strings.CS_MULTIPLIER_SETTING);
+
+    lifeUser.startCommunityService(minutes, () => {
+		 let scoreToGain = lifeUser.occupation!.waitingTime * 20 * multiplier;
+		 let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.userId === targetUser.id);
+
+		if (!chatBounty) {
+		  chatBounty = { bounty: bounty, isPoliceBounty: false, userId: targetUser.id };
+		  lifeChatData.bounties.push(chatBounty);
+		} else {
+		  chatBounty.bounty += scoreToGain * (-1);
+		}
+
+    if (chatBounty.bounty < 0){
+      chatBounty.bounty = 0;
+    }
+
+      if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
+        this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.doneCS(scoreToGain)}`);
+      }
+    });
+
+    return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
+  }
+ 
 }
