@@ -403,7 +403,7 @@ export class Plugin extends AbstractPlugin {
     return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
   }
 
-  private communityService = (chat: Chat, user: User, msg: TelegramBot.Message, params: string): string => {
+  private communityService = (chat: Chat, user: User, msg: TelegramBot.Message, params: string, match: string): string => {
     const lifeUser = this.helper.findOrCreateUser(user);
 
     if (lifeUser.occupation) {
@@ -427,17 +427,20 @@ export class Plugin extends AbstractPlugin {
 
     lifeUser.startCommunityService(minutes, () => {
 		 let scoreToGain = lifeUser.occupation!.waitingTime * 20 * multiplier;
+     const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
 		 let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.userId === targetUser.id);
+     const parameters = match.split(' ');
+     const targetUser = this.helper.getChatUserFromParameter(chat, parameters[0]);
 
 		if (!chatBounty) {
-		  chatBounty = { bounty: bounty, isPoliceBounty: false, userId: targetUser.id };
-		  lifeChatData.bounties.push(chatBounty);
-		} else {
+      this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.noBountyCS()}`);
+		} 
+    
+    else {
 		  chatBounty.bounty += scoreToGain * (-1);
-		}
-
-    if (chatBounty.bounty < 0){
-      chatBounty.bounty = 0;
+      if (chatBounty.bounty < 0) {
+        chatBounty.bounty = 0;
+      }
     }
 
       if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {

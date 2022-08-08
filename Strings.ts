@@ -132,8 +132,8 @@ export class Strings {
         + `/${Commands.bounties} - See all outstanding bounties\n`
         + `/${Commands.placebounty} - Place a bounty on a player\n`
         + `/${Commands.kill} - Attempt to kill a player to claim their bounty\n`
-        + `/${Commands.togglelifetags} - Toggles if you are tagged whenever you are done working or completed your sentence`;
-        + `/${Commands.communityService} - Perform community service to reduce your bounty\n`;
+        + `/${Commands.togglelifetags} - Toggles if you are tagged whenever you are done working or completed your sentence`
+        + `/${Commands.cs1} | /${Commands.cs2} - Perform community service to reduce your bounty\n`;
     }
 
     static get releasedFromJail(): string {
@@ -180,7 +180,7 @@ export class Strings {
         return `📃 @${bountyPlacer} put a bounty worth ${bounty} points on @${bountyTarget} !`;
     }
 
-    static currentlyCSuserName: string | null = null): string {
+    static currentlyCS(userName: string | null = null): string {
         if (userName) {
             return `${userName} is currently doing community service`;
         }
@@ -193,5 +193,9 @@ export class Strings {
 	
     static doneCS(reward: number): string {
         return `You're done with community service and reduced your bounty by ${reward} points!`;
+    }
+
+    static noBountyCS(): string {
+        return `You have no bounty, if you feel so bad about yourself that you still want to do community service maybe re-evaluate your life choices`
     }
 }
