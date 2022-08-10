@@ -132,7 +132,7 @@ export class Strings {
         + `/${Commands.bounties} - See all outstanding bounties\n`
         + `/${Commands.placebounty} - Place a bounty on a player\n`
         + `/${Commands.kill} - Attempt to kill a player to claim their bounty\n`
-        + `/${Commands.togglelifetags} - Toggles if you are tagged whenever you are done working or completed your sentence`
+        + `/${Commands.togglelifetags} - Toggles if you are tagged whenever you are done working or completed your sentence \n`
         + `/${Commands.cs1} | /${Commands.cs2} - Perform community service to reduce your bounty\n`;
     }
 

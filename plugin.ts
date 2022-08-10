@@ -71,6 +71,7 @@ export class Plugin extends AbstractPlugin {
       new ChatSettingTemplate(Strings.KILL_COST_PERCENTAGE_SETTING, "percentage of victim's points required to kill", 10, (original) => Number(original), (value) => null),
       new ChatSettingTemplate(Strings.KILL_COST_BOUNTY_MULTIPLIER_SETTING, "multiplier of killer's bounty required to kill", 1, (original) => Number(original), (value) => null),
       new ChatSettingTemplate(Strings.HOSPITAL_DURATION_MINUTES_SETTING, "duration in minutes player stays in hospital after 'killed'", 60 * 8, (original) => Number(original), (value) => null),
+      new ChatSettingTemplate(Strings.CS_MULTIPLIER_SETTING, "community service reward multiplier", 1, (original) => Number(original), (value) => null),
     ];
   }
 
