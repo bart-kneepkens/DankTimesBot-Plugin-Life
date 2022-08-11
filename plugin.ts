@@ -427,17 +427,17 @@ export class Plugin extends AbstractPlugin {
     const multiplier: number = chat.getSetting(Strings.CS_MULTIPLIER_SETTING);
 
     lifeUser.startCommunityService(minutes, () => {
-		 let scoreToGain = lifeUser.occupation!.waitingTime * 20 * multiplier;
-     const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
-		 let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.userId === targetUser.id);
      const parameters = match.split(' ');
      const targetUser = this.helper.getChatUserFromParameter(chat, parameters[0]);
+     const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
+		 let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.userId === targetUser.id);
 
-		if (!chatBounty) {
+     		if (!chatBounty) {
       this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.noBountyCS()}`);
 		} 
-    
+
     else {
+      let scoreToGain = lifeUser.occupation!.waitingTime * 20 * multiplier;
 		  chatBounty.bounty += scoreToGain * (-1);
       if (chatBounty.bounty < 0) {
         chatBounty.bounty = 0;
