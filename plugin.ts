@@ -404,15 +404,15 @@ export class Plugin extends AbstractPlugin {
     return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
   }
 
-  private communityService = (chat: Chat, user: User, msg: TelegramBot.Message, params: string, match: string): string => {
+  private communityService = (chat: Chat, user: User, msg: TelegramBot.Message, params: string): string => { //Function for cs
     const lifeUser = this.helper.findOrCreateUser(user);
 
-    if (lifeUser.occupation) {
+    if (lifeUser.occupation) { //To check that no other occupation is present
       return lifeUser.occupation.statusMessage(null);
     }
     let minutes: number;
 
-    if (params) {
+    if (params) { //Making sure that a normal amount of time is spent on cs
       minutes = Number(params);
 
       if (isNaN(minutes) || minutes < 1) {
@@ -426,25 +426,24 @@ export class Plugin extends AbstractPlugin {
     }
     const multiplier: number = chat.getSetting(Strings.CS_MULTIPLIER_SETTING);
 
-    lifeUser.startCommunityService(minutes, () => {
-     const parameters = match.split(' ');
-     const targetUser = this.helper.getChatUserFromParameter(chat, parameters[0]);
+    lifeUser.startCommunityService(minutes, () => { //The actual community service
      const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
-		 let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.userId === targetUser.id);
+		 let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.userId === lifeUser.user.id);
+     let scoreToGain = 0;
 
-     		if (!chatBounty) {
+    if (!chatBounty) { //Checks if the user has a bounty to reduce
       this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.noBountyCS()}`);
 		} 
 
-    else {
-      let scoreToGain = lifeUser.occupation!.waitingTime * 20 * multiplier;
+    else { //Reduces the bounty by x amount
+      scoreToGain += lifeUser.occupation!.waitingTime * 20 * multiplier;
 		  chatBounty.bounty += scoreToGain * (-1);
       if (chatBounty.bounty < 0) {
         chatBounty.bounty = 0;
       }
     }
 
-      if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
+    if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
         this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.doneCS(scoreToGain)}`);
       }
     });
