@@ -34,6 +34,14 @@ export class Strings {
         return "🏢 <b> Players working at the office </b> 🏢 ";
     }
 
+    static get highwayEmpty(): string {
+        return "Nothing but cars driving to work.."
+    }
+
+    static get serviceAtTheHighway(): string {
+        return "🚮 <b> Players picking up trash on the highway </b> 🚮 "
+    }
+    
     static get prisonEmpty(): string {
         return "AFK State Penitentiary is completely empty..";
     }
@@ -161,7 +169,7 @@ export class Strings {
     }
 
     static hustleSuccessful(gains: number): string {
-        return `You hustled and made ${Strings.points(gains)} 💰`
+        return `You hustled and made ${Strings.points(gains)} 💰`;
     }
 
     static startedWorking(minutesLeft: number): string {
@@ -196,6 +204,6 @@ export class Strings {
     }
 
     static noBountyCS(): string {
-        return `You have no bounty, if you feel so bad about yourself that you still want to do community service maybe re-evaluate your life choices`
+        return `You have no bounty, if you feel so bad about yourself that you still want to do community service maybe re-evaluate your life choices`;
     }
 }

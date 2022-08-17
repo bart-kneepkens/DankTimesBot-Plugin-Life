@@ -84,6 +84,6 @@ export class GoodSamaritanOccupation extends Occupation {
     }
 
     statusMessage(userName: string | null): string {
-        return `${Strings.currentlyCS(userName)} ${this.timeRemainingAsString} 🏢`;
+        return `${Strings.currentlyCS(userName)} ${this.timeRemainingAsString} 🚮`;
     }
 }

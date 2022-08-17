@@ -59,8 +59,9 @@ export class Plugin extends AbstractPlugin {
     const placeBountyCommand = new BotCommand([Commands.placebounty], "", this.placeBounty.bind(this), false);
     const killPlayerCommand = new BotCommand([Commands.kill], "", this.kill.bind(this), false);
     const communityServiceCommand = new BotCommand([Commands.cs1, Commands.cs2], "", this.communityService.bind(this), false);
+    const highwayCommand = new BotCommand([Commands.highway], "", this.describeHighway.bind(this), false);
     return [lifeCommand, statusCommand, workCommand, crimeCommand, breakoutCommand, officeCommand, prisonCommand, bribeCommand, togglelifetagsCommand,
-      hospitalCommand, bountiesCommand, placeBountyCommand, killPlayerCommand, communityServiceCommand];
+      hospitalCommand, bountiesCommand, placeBountyCommand, killPlayerCommand, communityServiceCommand, highwayCommand];
   }
 
   /// Override
@@ -125,6 +126,14 @@ export class Plugin extends AbstractPlugin {
       return Strings.officeEmpty;
     }
     return `${Strings.workingAtTheOffice}\n\n-\t` + entries.join("\n-\t");
+  }
+
+  private describeHighway = (): string => {
+    const entries = this.lifeUsers.filter(u => u.occupation instanceof GoodSamaritanOccupation).map(u => u.buildingEntry);
+    if (entries.length == 0){
+      return Strings.highwayEmpty;
+    }
+    return `${Strings.serviceAtTheHighway}\n\n-\t` + entries.join("\n-\t");
   }
 
   private describePrison = (): string => {
@@ -406,11 +415,17 @@ export class Plugin extends AbstractPlugin {
 
   private communityService = (chat: Chat, user: User, msg: TelegramBot.Message, params: string): string => { //Function for cs
     const lifeUser = this.helper.findOrCreateUser(user);
+    let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.userId === lifeUser.user.id);
 
     if (lifeUser.occupation) { //To check that no other occupation is present
       return lifeUser.occupation.statusMessage(null);
     }
+    
     let minutes: number;
+
+    if (!chatBounty) { //Checks if the user has a bounty to reduce
+      this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.noBountyCS()}`);
+		} 
 
     if (params) { //Making sure that a normal amount of time is spent on cs
       minutes = Number(params);
@@ -428,19 +443,16 @@ export class Plugin extends AbstractPlugin {
 
     lifeUser.startCommunityService(minutes, () => { //The actual community service
      const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
-		 let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.userId === lifeUser.user.id);
+
      let scoreToGain = 0;
 
-    if (!chatBounty) { //Checks if the user has a bounty to reduce
-      this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.noBountyCS()}`);
-		} 
 
-    else { //Reduces the bounty by x amount
-      scoreToGain += lifeUser.occupation!.waitingTime * 20 * multiplier;
-		  chatBounty.bounty += scoreToGain * (-1);
-      if (chatBounty.bounty < 0) {
-        chatBounty.bounty = 0;
-      }
+
+    //Reduces the bounty by x amount
+    scoreToGain += lifeUser.occupation!.waitingTime * 20 * multiplier;
+		chatBounty.bounty += scoreToGain * (-1);
+    if (chatBounty.bounty < 0) {
+      chatBounty.bounty = 0;
     }
 
     if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
