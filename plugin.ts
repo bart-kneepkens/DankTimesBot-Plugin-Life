@@ -425,8 +425,7 @@ export class Plugin extends AbstractPlugin {
     let minutes: number;
 
     if (!chatBounty) { //Checks if the user has a bounty to reduce
-      this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.noBountyCS()}`);
-      return `${lifeUser.mentionedUserName} Get fucked`
+      return `${lifeUser.mentionedUserName} ${Strings.noBountyCS()}`
 		}
 
     else{
