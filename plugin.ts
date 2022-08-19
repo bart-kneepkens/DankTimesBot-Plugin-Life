@@ -449,13 +449,15 @@ export class Plugin extends AbstractPlugin {
 
       //Reduces the bounty by x amount
       scoreToGain += lifeUser.occupation!.waitingTime * 20 * multiplier;
+      let oldBounty = chatBounty.bounty;
       chatBounty.bounty += scoreToGain * (-1);
       if (chatBounty.bounty < 0) {
         chatBounty.bounty = 0;
       }
 
       if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
-          this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.doneCS(scoreToGain)}`);
+          let reducedBounty = oldBounty - chatBounty.bounty;
+          this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.doneCS(reducedBounty)}`);
         }
       });
 
