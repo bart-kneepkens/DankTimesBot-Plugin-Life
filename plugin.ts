@@ -415,6 +415,7 @@ export class Plugin extends AbstractPlugin {
 
   private communityService = (chat: Chat, user: User, msg: TelegramBot.Message, params: string): string => { //Function for cs
     const lifeUser = this.helper.findOrCreateUser(user);
+    const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
     let chatBounty = lifeChatData.bounties.find((chatBounty) => chatBounty.userId === lifeUser.user.id);
 
     if (lifeUser.occupation) { //To check that no other occupation is present
@@ -425,42 +426,41 @@ export class Plugin extends AbstractPlugin {
 
     if (!chatBounty) { //Checks if the user has a bounty to reduce
       this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.noBountyCS()}`);
-		} 
+      return `${lifeUser.mentionedUserName} Get fucked`
+		}
 
-    if (params) { //Making sure that a normal amount of time is spent on cs
-      minutes = Number(params);
+    else{
+      if (params) { //Making sure that a normal amount of time is spent on cs
+        minutes = Number(params);
 
-      if (isNaN(minutes) || minutes < 1) {
-        return `'${params}' is not a valid number of minutes 🙄`;
+        if (isNaN(minutes) || minutes < 1) {
+          return `'${params}' is not a valid number of minutes 🙄`;
+        }
+        if (minutes > 60) {
+          return `Maybe start actually improving the community rather than spending time on afk 😤`;
+        }
+      } else {
+        minutes = Random.number(2, 10);
       }
-      if (minutes > 60) {
-        return `Maybe start actually improving the community rather than spending time on afk 😤`;
+      const multiplier: number = chat.getSetting(Strings.CS_MULTIPLIER_SETTING);
+
+      lifeUser.startCommunityService(minutes, () => { //The actual community service
+    
+      let scoreToGain = 0;
+
+      //Reduces the bounty by x amount
+      scoreToGain += lifeUser.occupation!.waitingTime * 20 * multiplier;
+      chatBounty.bounty += scoreToGain * (-1);
+      if (chatBounty.bounty < 0) {
+        chatBounty.bounty = 0;
       }
-    } else {
-      minutes = Random.number(2, 10);
+
+      if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
+          this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.doneCS(scoreToGain)}`);
+        }
+      });
+
+      return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
     }
-    const multiplier: number = chat.getSetting(Strings.CS_MULTIPLIER_SETTING);
-
-    lifeUser.startCommunityService(minutes, () => { //The actual community service
-     const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
-
-     let scoreToGain = 0;
-
-
-
-    //Reduces the bounty by x amount
-    scoreToGain += lifeUser.occupation!.waitingTime * 20 * multiplier;
-		chatBounty.bounty += scoreToGain * (-1);
-    if (chatBounty.bounty < 0) {
-      chatBounty.bounty = 0;
-    }
-
-    if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
-        this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.doneCS(scoreToGain)}`);
-      }
-    });
-
-    return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
-  }
- 
+ }
 }
