@@ -424,7 +424,7 @@ export class Plugin extends AbstractPlugin {
     
     let minutes: number;
 
-    if (!chatBounty) { //Checks if the user has a bounty to reduce
+    if (!chatBounty ) { //Checks if the user has a bounty to reduce
       return `${lifeUser.mentionedUserName} ${Strings.noBountyCS()}`
 		}
 
@@ -449,14 +449,20 @@ export class Plugin extends AbstractPlugin {
 
       //Reduces the bounty by x amount
       scoreToGain += lifeUser.occupation!.waitingTime * 20 * multiplier;
+      scoreToGain = scoreToGain > chatBounty ? chatBounty : scoreToGain;
       let oldBounty = chatBounty.bounty;
-      chatBounty.bounty += scoreToGain * (-1);
-      if (chatBounty.bounty < 0) {
-        chatBounty.bounty = 0;
+      chatBounty.bounty -= scoreToGain;
+
+      if (chatBounty.bounty <= 0) { //extra check as not to go below zero
+        let reducedBounty = oldBounty;
+        lifeChatData.bounties.splice(lifeChatData.bounties.indexOf(bounty), 1);
+      }
+
+      else{
+        let reducedBounty = oldBounty - chatBounty.bounty;
       }
 
       if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
-          let reducedBounty = oldBounty - chatBounty.bounty;
           this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.doneCS(reducedBounty)}`);
         }
       });
