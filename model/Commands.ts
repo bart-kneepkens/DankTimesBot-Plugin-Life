@@ -15,6 +15,6 @@ export enum Commands {
     placebounty = "placebounty",
     kill = "kill",
     cs1 = "communityservice",
-    cs2 = "cs"
+    cs2 = "cs",
     highway = "highway";
 }
