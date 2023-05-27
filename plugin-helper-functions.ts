@@ -13,7 +13,7 @@ export class PluginHelperFunctions {
 
     public createBountiesString(bounties: Bounty[], chat: Chat): string {
         if (bounties.length === 0) {
-            return '';
+            return "";
         }
         return bounties
             .sort((a, b) => {
@@ -60,7 +60,7 @@ export class PluginHelperFunctions {
         if (!match) {
             return { errorMsg: Strings.killTooFewArgumentsError, killCosts: null, targetUser: null };
         }
-        const parameters = match.split(' ');
+        const parameters = match.split(" ");
 
         if (parameters.length < 1) {
             return { errorMsg: Strings.killTooFewArgumentsError, killCosts: null, targetUser: null };
@@ -93,7 +93,7 @@ export class PluginHelperFunctions {
     }
 
     public getChatUserFromParameter(chat: Chat, parameter: string): User | null {
-        const username = parameter.replace('@', '');
+        const username = parameter.replace("@", "");
         const user = Array.from(chat.users.values()).find((u) => u.name.toLowerCase() === username.toLowerCase());
         return user ?? null;
     }

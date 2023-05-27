@@ -11,22 +11,22 @@ export class Strings {
 
     static minutes(value: number): string {
         if (value < 1) {
-            return `less than a minute`
+            return "less than a minute";
         } else if (Math.abs(value) == 1) {
             return `${value} minute`;
         } 
-        return `${value} minutes`
+        return `${value} minutes`;
     }
 
     static points(value: number): string {
         if (Math.abs(value) == 1) {
             return `${value} point`;
         }
-        return `${value} points`
+        return `${value} points`;
     }
 
     static get officeEmpty(): string {
-        return "It's an empty day at the office.."
+        return "It's an empty day at the office..";
     }
 
     static get workingAtTheOffice(): string {
@@ -50,7 +50,7 @@ export class Strings {
     }
 
     static get bounties(): string {
-        return "📃 <b> Bounties </b> 📃"
+        return "📃 <b> Bounties </b> 📃";
     }
 
     static get placeBountyTooFewArgumentsError(): string {
@@ -159,7 +159,7 @@ export class Strings {
     }
 
     static hustleSuccessful(gains: number): string {
-        return `You hustled and made ${Strings.points(gains)} 💰`
+        return `You hustled and made ${Strings.points(gains)} 💰`;
     }
 
     static startedWorking(minutesLeft: number): string {
