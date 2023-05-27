@@ -135,7 +135,7 @@ export class Strings {
     }
 
     static get releasedFromJail(): string {
-        return `You're released from prison!`;
+        return "You're released from prison!";
     }
 
     static get releasedFromHospital(): string {
