@@ -17,6 +17,7 @@ import { PluginHelperFunctions } from "./plugin-helper-functions";
 import { Commands } from "./model/Commands";
 import { ScoreChangeReason } from "./model/ScoreChangeReason";
 import { Bounty } from "./model/Bounty";
+import { ChatResetEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/chat-reset-event-arguments";
 
 export class Plugin extends AbstractPlugin {
 
@@ -40,6 +41,7 @@ export class Plugin extends AbstractPlugin {
       });
       this.saveDataToFile(Plugin.LIFE_CHATS_DATA_FILE, this.lifeChatsData);
     });
+    this.subscribeToPluginEvent(PluginEvent.ChatReset, this.onChatReset.bind(this));
     this.helper = new PluginHelperFunctions(this.lifeChatsData, this.lifeUsers);
   }
 
@@ -113,6 +115,16 @@ export class Plugin extends AbstractPlugin {
         });
       });
     });
+  }
+
+  private onChatReset(eventArgs: ChatResetEventArguments): void {
+    var chatData = this.helper.getOrCreateLifeChatsData(eventArgs.chat.id);
+    chatData.bounties = [];
+    chatData.usersInHospital = [];
+
+    var users = Array.from(eventArgs.chat.users.values());
+    var lifeUsers = this.lifeUsers.filter(lifeUser => users.includes(lifeUser.user));
+    lifeUsers.forEach(lifeUser => lifeUser.clearOccupation());
   }
 
   /// Commands
