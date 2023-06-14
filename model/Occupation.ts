@@ -45,8 +45,9 @@ export class WageSlaveOccupation extends Occupation {
 
 export class CriminalOccupation extends Occupation {
 
-    constructor() {
-        super(Random.number(10, 20));
+    constructor(unlawfulKill: boolean) {
+        const severity = unlawfulKill ? 25 : 10;
+        super(Random.number(severity, severity * 2));
     }
 
     get startMessage(): string {

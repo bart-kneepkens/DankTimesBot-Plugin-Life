@@ -36,9 +36,9 @@ export class LifeUser {
         this.setTimerForOccupation(completion);
     }
 
-    incarcerate (completion: (() => void)) {
+    incarcerate (unlawfulKill: boolean, completion: (() => void)) {
         this.clearOccupation();
-        this.occupation = new CriminalOccupation();
+        this.occupation = new CriminalOccupation(unlawfulKill);
         this.setTimerForOccupation(completion);
     }
 

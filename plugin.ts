@@ -234,17 +234,14 @@ export class Plugin extends AbstractPlugin {
                 bountyReward = chat.alterUserScore(new AlterUserScoreArgs(user, bountyReward, Strings.PLUGIN_NAME, ScoreChangeReason.receivedBounty));
 
                 if (!bounty || !bounty.isPoliceBounty) {
-                    const bountyForUnlawfulKilling = 700 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
+                    const bountyForUnlawfulKilling = 3040 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
                     this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKilling);
                 }
                 lifeChatData.bounties.splice(lifeChatData.bounties.indexOf(bounty), 1);
                 return `💀 @${user.name} has mortally wounded ${woundedUsername} and claimed a ${bountyReward} points bounty!`;
 
             } else if (!bounty || !bounty.isPoliceBounty) {
-                const bountyForUnlawfulKillingAttempt = 350 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
-                this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKillingAttempt);
-
-                lifeUser.incarcerate(() => {
+                lifeUser.incarcerate(true, () => {
                     if (!lifeChatData.usersNotTagged.includes(user.id)) {
                         this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
                     }
@@ -276,11 +273,11 @@ export class Plugin extends AbstractPlugin {
             return `${lifeUser.mentionedUserName} ${Strings.isNotInPrison(inmate.user.name)}`;
         }
 
-        const successful = Math.random() >= 0.35;
+        const successful = Math.random() >= 0.4;
 
         if (successful) {
             inmate.clearOccupation();
-            const scoreGained = 230 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
+            const scoreGained = 380 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
             chat.alterUserScore(new AlterUserScoreArgs(user, scoreGained, Strings.PLUGIN_NAME, ScoreChangeReason.breakoutSucceeded));
 
             this.helper.addPoliceBounty(chat, user, scoreGained);
@@ -289,7 +286,7 @@ export class Plugin extends AbstractPlugin {
 
             return `${lifeUser.mentionedUserName} ${Strings.didBreakOutInmate(inmate.user.name)}`;
         } else {
-            lifeUser.incarcerate(() => {
+            lifeUser.incarcerate(false, () => {
                 const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
 
                 if (!lifeChatData.usersNotTagged.includes(user.id)) {
@@ -363,7 +360,7 @@ export class Plugin extends AbstractPlugin {
 
         const multiplier: number = chat.getSetting(Strings.HUSTLE_MULTIPLIER_SETTING);
 
-        const successful = Math.random() >= 0.5;
+        const successful = Math.random() >= 0.4;
 
         if (successful) {
             const scoreToGain = Random.number(60, 700) * multiplier;
@@ -371,7 +368,7 @@ export class Plugin extends AbstractPlugin {
             this.helper.addPoliceBounty(chat, user, scoreToGain);
             return `${lifeUser.mentionedUserName} ${Strings.hustleSuccessful(actualScoreGained)}`;
         } else {
-            lifeUser.incarcerate(() => {
+            lifeUser.incarcerate(false, () => {
                 if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
                     this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
                 }
