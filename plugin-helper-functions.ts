@@ -51,7 +51,7 @@ export class PluginHelperFunctions {
         }
     }
 
-    public prepareKill(chat: Chat, user: User, match: string): { errorMsg: string, killCosts: number, targetUser: User } {
+    public prepareKill(chat: Chat, user: User, match: string): { errorMsg: string | null, killCosts: number | null, targetUser: User | null } {
         const lifeUser = this.findOrCreateUser(user);
 
         if (lifeUser.occupation) {

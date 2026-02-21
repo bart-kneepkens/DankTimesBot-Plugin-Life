@@ -205,7 +205,7 @@ export class Plugin extends AbstractPlugin {
             return preparation.errorMsg;
         }
         const question = new BotCommandConfirmationQuestion();
-        question.confirmationQuestionText = `💀 Making an attempt on ${preparation.targetUser.name}'s life will cost ${preparation.killCosts} points. Type 'yes' to confirm.`;
+        question.confirmationQuestionText = `💀 Making an attempt on ${preparation.targetUser!.name}'s life will cost ${preparation.killCosts} points. Type 'yes' to confirm.`;
 
         question.actionOnConfirm = () => {
             const preparation = this.helper.prepareKill(chat, user, match);
@@ -213,22 +213,22 @@ export class Plugin extends AbstractPlugin {
             if (preparation.errorMsg) {
                 return preparation.errorMsg;
             }
-            chat.alterUserScore(new AlterUserScoreArgs(user, -preparation.killCosts, Strings.PLUGIN_NAME, ScoreChangeReason.killPlayer));
+            chat.alterUserScore(new AlterUserScoreArgs(user, -preparation.killCosts!, Strings.PLUGIN_NAME, ScoreChangeReason.killPlayer));
             const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
-            const bounty = lifeChatData.bounties.find((bounty) => bounty.userId === preparation.targetUser.id);
-            const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser);
+            const bounty = lifeChatData.bounties.find((bounty) => bounty.userId === preparation.targetUser!.id);
+            const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser!);
             const lifeUser = this.helper.findOrCreateUser(user);
-            const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser.id) ? targetLifeUser.user.name : targetLifeUser.mentionedUserName;
+            const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser!.id) ? targetLifeUser.user.name : targetLifeUser.mentionedUserName;
 
             if (Random.number(0, 100) >= 40) {
                 const minutes = chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
                 targetLifeUser.hospitalise(minutes, () => {
-                    if (!lifeChatData.usersNotTagged.includes(preparation.targetUser.id)) {
+                    if (!lifeChatData.usersNotTagged.includes(preparation.targetUser!.id)) {
                         this.sendMessage(chat.id, `${targetLifeUser.mentionedUserName} ${Strings.releasedFromHospital}`);
                     }
-                    lifeChatData.usersInHospital = lifeChatData.usersInHospital.filter((uih) => uih.userId !== preparation.targetUser.id);
+                    lifeChatData.usersInHospital = lifeChatData.usersInHospital.filter((uih) => uih.userId !== preparation.targetUser!.id);
                 });
-                lifeChatData.usersInHospital.push({ userId: preparation.targetUser.id, minutes: minutes });
+                lifeChatData.usersInHospital.push({ userId: preparation.targetUser!.id, minutes: minutes });
 
                 let bountyReward = bounty ? bounty.bounty : 0;
                 bountyReward = chat.alterUserScore(new AlterUserScoreArgs(user, bountyReward, Strings.PLUGIN_NAME, ScoreChangeReason.receivedBounty));
@@ -237,7 +237,9 @@ export class Plugin extends AbstractPlugin {
                     const bountyForUnlawfulKilling = 3040 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
                     this.helper.addPoliceBounty(chat, user, bountyForUnlawfulKilling);
                 }
-                lifeChatData.bounties.splice(lifeChatData.bounties.indexOf(bounty), 1);
+                if (bounty) {
+                    lifeChatData.bounties.splice(lifeChatData.bounties.indexOf(bounty), 1);
+                }      
                 return `💀 @${user.name} has mortally wounded ${woundedUsername} and claimed a ${bountyReward} points bounty!`;
 
             } else if (!bounty || !bounty.isPoliceBounty) {
