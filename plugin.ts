@@ -147,7 +147,9 @@ export class Plugin extends AbstractPlugin {
                 args.success = true;
                 args.errorMessage = "";
             }
-        } else if (args.occupationChange === OccupationChange.FORCE_CONSCRIPT || (args.occupationChange === OccupationChange.CONSCRIPT && (occupation === null || occupation.asEnum !== OccupationEnum.HOSPITAL))) {
+        } else if (args.occupationChange === OccupationChange.FORCE_CONSCRIPT ||
+            (args.occupationChange === OccupationChange.CONSCRIPT && (occupation === null || occupation.asEnum !== OccupationEnum.HOSPITAL))) {
+                
             if (args.occupation === OccupationEnum.HOSPITAL) {
                 const minutes = args.minutes > 0 ? args.minutes : args.chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
                 this.hospitaliseUser(lifeChat, lifeUser, minutes);
