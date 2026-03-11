@@ -18,6 +18,9 @@ import { Commands } from "./model/Commands";
 import { ScoreChangeReason } from "./model/ScoreChangeReason";
 import { Bounty } from "./model/Bounty";
 import { ChatResetEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/chat-reset-event-arguments";
+import { CustomEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/custom-event-arguments";
+import { ForceOccupationChange, OccupationChange } from "./model/ForceOccupationChange";
+import { OccupationEnum } from "./model/OccupationEnum";
 
 export class Plugin extends AbstractPlugin {
 
@@ -42,6 +45,7 @@ export class Plugin extends AbstractPlugin {
             this.saveDataToFile(Plugin.LIFE_CHATS_DATA_FILE, this.lifeChatsData);
         });
         this.subscribeToPluginEvent(PluginEvent.ChatReset, this.onChatReset.bind(this));
+        this.subscribeToPluginEvent(PluginEvent.Custom, this.onForceOccupationChange.bind(this), "*", "life.force-occupation-change");
         this.helper = new PluginHelperFunctions(this.lifeChatsData, this.lifeUsers);
     }
 
@@ -125,6 +129,44 @@ export class Plugin extends AbstractPlugin {
         const users = Array.from(eventArgs.chat.users.values());
         const lifeUsers = this.lifeUsers.filter(lifeUser => users.includes(lifeUser.user));
         lifeUsers.forEach(lifeUser => lifeUser.clearOccupation());
+    }
+
+    private onForceOccupationChange(eventArgs: CustomEventArguments): void {
+        const args = eventArgs.eventData as ForceOccupationChange;
+        const lifeChat = this.helper.getOrCreateLifeChatsData(args.chat.id);
+        const lifeUser = this.helper.findOrCreateUser(args.user);
+        const occupation = lifeUser.occupation;
+
+        if (args.occupationChange === OccupationChange.RELEASE) {
+            if (occupation === null || occupation.asEnum !== args.occupation) {
+                args.success = false;
+                args.errorMessage = "User is not currently in that occupation";
+
+            } else {
+                lifeUser.clearOccupation();
+                args.success = true;
+                args.errorMessage = "";
+            }
+        } else if (args.occupationChange === OccupationChange.FORCE_CONSCRIPT || (args.occupationChange === OccupationChange.CONSCRIPT && (occupation === null || occupation.asEnum !== OccupationEnum.HOSPITAL))) {
+            if (args.occupation === OccupationEnum.HOSPITAL) {
+                const minutes = args.minutes > 0 ? args.minutes : args.chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
+                this.hospitaliseUser(lifeChat, lifeUser, minutes);
+
+            } else if (args.occupation === OccupationEnum.JAIL) {
+                const minutes = args.minutes > 0 ? args.minutes : this.randomIncarcerationDuration(true);
+                this.incarcerateUser(lifeChat, lifeUser, minutes);
+
+            } else if (args.occupation === OccupationEnum.OFFICE) {
+                const minutes = args.minutes > 0 ? args.minutes : this.randomWorkDuration();
+                this.putUserToWork(args.chat, lifeUser, minutes);
+            }
+            args.success = true;
+            args.errorMessage = "";
+
+        } else {
+            args.success = false;
+            args.errorMessage = "This occupation change is not allowed";
+        }
     }
 
     /// Commands
@@ -222,14 +264,7 @@ export class Plugin extends AbstractPlugin {
 
             if (Random.number(0, 100) >= 40) {
                 const minutes = chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
-                targetLifeUser.hospitalise(minutes, () => {
-                    if (!lifeChatData.usersNotTagged.includes(preparation.targetUser!.id)) {
-                        this.sendMessage(chat.id, `${targetLifeUser.mentionedUserName} ${Strings.releasedFromHospital}`);
-                    }
-                    lifeChatData.usersInHospital = lifeChatData.usersInHospital.filter((uih) => uih.userId !== preparation.targetUser!.id);
-                });
-                lifeChatData.usersInHospital.push({ userId: preparation.targetUser!.id, minutes: minutes });
-
+                this.hospitaliseUser(lifeChatData, lifeUser, minutes);
                 let bountyReward = bounty ? bounty.bounty : 0;
                 bountyReward = chat.alterUserScore(new AlterUserScoreArgs(user, bountyReward, Strings.PLUGIN_NAME, ScoreChangeReason.receivedBounty));
 
@@ -239,15 +274,11 @@ export class Plugin extends AbstractPlugin {
                 }
                 if (bounty) {
                     lifeChatData.bounties.splice(lifeChatData.bounties.indexOf(bounty), 1);
-                }      
+                }
                 return `💀 @${user.name} has mortally wounded ${woundedUsername} and claimed a ${bountyReward} points bounty!`;
 
             } else if (!bounty || !bounty.isPoliceBounty) {
-                lifeUser.incarcerate(true, () => {
-                    if (!lifeChatData.usersNotTagged.includes(user.id)) {
-                        this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
-                    }
-                });
+                this.incarcerateUser(lifeChatData, lifeUser, this.randomIncarcerationDuration(true));
                 return `😞 ${lifeUser.mentionedUserName} failed to kill ${woundedUsername} and has been imprisoned for ${Strings.minutes(lifeUser.occupation!.waitingTime)} for the unlawful attempt 👮🏻`;
             }
             return `😞 ${lifeUser.mentionedUserName} failed to kill ${woundedUsername}. They live to shitpost another day 🌞`;
@@ -288,13 +319,8 @@ export class Plugin extends AbstractPlugin {
 
             return `${lifeUser.mentionedUserName} ${Strings.didBreakOutInmate(inmate.user.name)}`;
         } else {
-            lifeUser.incarcerate(false, () => {
-                const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
-
-                if (!lifeChatData.usersNotTagged.includes(user.id)) {
-                    this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
-                }
-            });
+            const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
+            this.incarcerateUser(lifeChatData, lifeUser, this.randomIncarcerationDuration(false));
             return `${lifeUser.mentionedUserName} ${Strings.breakoutFailed(lifeUser.occupation!.waitingTime)}`;
         }
     };
@@ -359,9 +385,7 @@ export class Plugin extends AbstractPlugin {
         if (lifeUser.occupation) {
             return lifeUser.occupation.statusMessage(null);
         }
-
         const multiplier: number = chat.getSetting(Strings.HUSTLE_MULTIPLIER_SETTING);
-
         const successful = Math.random() >= 0.4;
 
         if (successful) {
@@ -370,11 +394,8 @@ export class Plugin extends AbstractPlugin {
             this.helper.addPoliceBounty(chat, user, scoreToGain);
             return `${lifeUser.mentionedUserName} ${Strings.hustleSuccessful(actualScoreGained)}`;
         } else {
-            lifeUser.incarcerate(false, () => {
-                if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
-                    this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.releasedFromJail}`);
-                }
-            });
+            const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
+            this.incarcerateUser(lifeChatData, lifeUser, this.randomIncarcerationDuration(false));
             return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
         }
     };
@@ -397,19 +418,51 @@ export class Plugin extends AbstractPlugin {
                 return "If you really want to work that hard then close this chat already 😤";
             }
         } else {
-            minutes = Random.number(2, 10);
+            minutes = this.randomWorkDuration();
         }
-        const multiplier: number = chat.getSetting(Strings.WORK_MULTIPLIER_SETTING);
-
-        lifeUser.startWork(minutes, () => {
-            let scoreToGain = lifeUser.occupation!.waitingTime * 20 * multiplier;
-            scoreToGain = chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, Strings.PLUGIN_NAME, ScoreChangeReason.workCompleted));
-
-            if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.id)) {
-                this.sendMessage(chat.id, `${lifeUser.mentionedUserName} ${Strings.doneWorking(scoreToGain)}`);
-            }
-        });
-
+        this.putUserToWork(chat, lifeUser, minutes);
         return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
     };
+
+    private hospitaliseUser(chat: LifeChatData, user: LifeUser, minutes: number): void {
+        if (chat.usersInHospital.find((uh) => uh.userId === user.user.id)) {
+            return;
+        }
+        user.hospitalise(minutes, () => {
+            if (!chat.usersNotTagged.includes(user.user.id)) {
+                this.sendMessage(chat.chatId, `${user.mentionedUserName} ${Strings.releasedFromHospital}`);
+            }
+            chat.usersInHospital = chat.usersInHospital.filter((uih) => uih.userId !== user.user.id);
+        });
+        chat.usersInHospital.push({ userId: user.user.id, minutes: minutes });
+    }
+
+    private incarcerateUser(chat: LifeChatData, user: LifeUser, minutes: number): void {
+        user.incarcerate(minutes, () => {
+            if (!chat.usersNotTagged.includes(user.user.id)) {
+                this.sendMessage(chat.chatId, `${user.mentionedUserName} ${Strings.releasedFromJail}`);
+            }
+        });
+    }
+
+    private putUserToWork(chat: Chat, user: LifeUser, minutes: number): void {
+        user.startWork(minutes, () => {
+            const multiplier: number = chat.getSetting(Strings.WORK_MULTIPLIER_SETTING);
+            let scoreToGain = user.occupation!.waitingTime * 20 * multiplier;
+            scoreToGain = chat.alterUserScore(new AlterUserScoreArgs(user.user, scoreToGain, Strings.PLUGIN_NAME, ScoreChangeReason.workCompleted));
+
+            if (!this.lifeChatsData.get(chat.id)?.usersNotTagged.includes(user.user.id)) {
+                this.sendMessage(chat.id, `${user.mentionedUserName} ${Strings.doneWorking(scoreToGain)}`);
+            }
+        });
+    }
+
+    private randomWorkDuration(): number {
+        return Random.number(2, 10);
+    }
+
+    private randomIncarcerationDuration(unlawfulKill: boolean): number {
+        const severity = unlawfulKill ? 25 : 10;
+        return Random.number(severity, severity * 2);
+    }
 }

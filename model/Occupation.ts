@@ -1,5 +1,6 @@
 import { Strings } from "../Strings";
 import { Random } from "../Random";
+import { OccupationEnum } from "./OccupationEnum";
 
 export abstract class Occupation {
 
@@ -25,6 +26,8 @@ export abstract class Occupation {
 
     abstract get startMessage(): string;
 
+    abstract get asEnum(): OccupationEnum;
+
     abstract statusMessage(userName: string | null): string;
 }
 
@@ -38,6 +41,10 @@ export class WageSlaveOccupation extends Occupation {
         return Strings.startedWorking(this.remainingTimeMinutes);
     }
 
+    get asEnum(): OccupationEnum {
+        return OccupationEnum.OFFICE;
+    }
+
     statusMessage(userName: string | null): string {
         return `${Strings.currentlyWorking(userName)} ${this.timeRemainingAsString} 🏢`;
     }
@@ -45,13 +52,16 @@ export class WageSlaveOccupation extends Occupation {
 
 export class CriminalOccupation extends Occupation {
 
-    constructor(unlawfulKill: boolean) {
-        const severity = unlawfulKill ? 25 : 10;
-        super(Random.number(severity, severity * 2));
+    constructor(minutes: number) {
+        super(minutes);
     }
 
     get startMessage(): string {
         return Strings.thrownInJail(this.remainingTimeMinutes);
+    }
+
+    get asEnum(): OccupationEnum {
+        return OccupationEnum.JAIL;
     }
 
     statusMessage(userName: string | null): string {
@@ -67,6 +77,10 @@ export class HospitalisedOccupation extends Occupation {
 
     get startMessage(): string {
         return "";  // Unused.
+    }
+
+    get asEnum(): OccupationEnum {
+        return OccupationEnum.HOSPITAL;
     }
 
     statusMessage(userName: string | null): string {
