@@ -36,7 +36,7 @@ export class Plugin extends AbstractPlugin {
     private readonly helper: PluginHelperFunctions;
 
     constructor() {
-        super(Strings.PLUGIN_NAME, "1.3.0-alpha");
+        super(Strings.PLUGIN_NAME, "1.3.0");
         this.subscribeToPluginEvent(PluginEvent.BotStartup, this.onBotStartup.bind(this));
         this.subscribeToPluginEvent(PluginEvent.BotShutdown, () => {
             this.lifeChatsData.forEach((data) => {
