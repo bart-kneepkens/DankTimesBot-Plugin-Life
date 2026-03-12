@@ -85,6 +85,10 @@ export class Strings {
         return "Provide a valid, positive number please ✋";
     }
 
+    static get workingFailed(): string {
+        return "You lack the motivation to start working.";
+    }
+
     static cantSpendMoreThanYouHave(amount: number): string {
         return `This will cost you ${amount} points, which you don't have, you filthy peasant ✋`;
     }

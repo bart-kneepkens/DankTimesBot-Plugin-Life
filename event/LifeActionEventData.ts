@@ -40,7 +40,9 @@ export class LifeActionEventData {
 export enum LifeAction {
     WORK,
     HUSTLE,
-    KILL
+    KILL,
+    BRIBE,
+    BREAKOUT
 }
 
 /**

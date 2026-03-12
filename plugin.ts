@@ -314,9 +314,10 @@ export class Plugin extends AbstractPlugin {
             return `${lifeUser.mentionedUserName} ${Strings.isNotInPrison(inmate.user.name)}`;
         }
 
-        const successful = Math.random() >= 0.4;
+        const eventData = new LifeActionEventData(chat, user, LifeAction.BREAKOUT, 0.6);
+        this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
-        if (successful) {
+        if (this.lifeActionSucceeded(eventData)) {
             inmate.clearOccupation();
             const scoreGained = 380 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
             chat.alterUserScore(new AlterUserScoreArgs(user, scoreGained, Strings.PLUGIN_NAME, ScoreChangeReason.breakoutSucceeded));
@@ -354,11 +355,12 @@ export class Plugin extends AbstractPlugin {
         if (amount > totalFunds) {
             return Strings.cantSpendMoreThanYouHave(amount);
         }
-        const chance = (amount / totalFunds);
-        const succeeds = Math.random() < (chance * 4.2);
+        const odds = (amount / totalFunds) * 4.2;
+        const eventData = new LifeActionEventData(chat, user, LifeAction.BRIBE, odds);
+        this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
         const actualBribedAmount = chat.alterUserScore(new AlterUserScoreArgs(user, -amount, Strings.PLUGIN_NAME, ScoreChangeReason.bribe));
 
-        if (succeeds) {
+        if (this.lifeActionSucceeded(eventData)) {
             inmate.clearOccupation();
             this.helper.addPoliceBounty(chat, user, amount);
             return Strings.bribingSuccessful;
@@ -431,8 +433,12 @@ export class Plugin extends AbstractPlugin {
         }
         const eventData = new LifeActionEventData(chat, user, LifeAction.WORK);
         this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
-        this.putUserToWork(chat, lifeUser, minutes);
-        return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
+
+        if (eventData.forceActionOdds !== ForceActionOdds.FORCE_FAILURE) {
+            this.putUserToWork(chat, lifeUser, minutes);
+            return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
+        }
+        return Strings.workingFailed;
     };
 
     private hospitaliseUser(chat: LifeChatData, user: LifeUser, minutes: number): void {
