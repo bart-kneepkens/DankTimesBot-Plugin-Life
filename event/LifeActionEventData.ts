@@ -5,33 +5,30 @@ import { LifeAction } from "../model/LifeAction";
 /**
  * Data for the custom event which the Life plugin publishes before a user performs a Life action (work, hustle, kill, etc.).
  */
-export class LifeActionEventData {
+export interface LifeActionEventData {
 
+    /**
+     * The chat in which the action occurs.
+     */
+    readonly chat: Chat;
+    /**
+     * The user performing the action.
+     */
+    readonly user: User;
+    /**
+     * The actual Life action being performed.
+     */
+    readonly action: LifeAction;
+
+    /**
+     * The odds for this action to succeed, represented as a number between 0 and 1. Not applicable for work.
+     * May be changed to alter the odds of the action succeeding.
+     */
+    odds: number;
     /**
      * How to handle the odds of the Life action succeeding. May be changed to alter the way the odds are handled.
      */
-    public forceActionOdds: ForceActionOdds = ForceActionOdds.NO_FORCE;
-
-    public constructor(
-        /**
-         * The chat in which the action occurs.
-         */
-        public readonly chat: Chat,
-        /**
-         * The user performing the action.
-         */
-        public readonly user: User,
-        /**
-         * The actual Life action being performed.
-         */
-        public readonly action: LifeAction,
-
-        /**
-         * The odds for this action to succeed, represented as a number between 0 and 1. Not applicable for work.
-         * May be changed to alter the odds of the action succeeding.
-         */
-        public odds: number = 0
-    ) { }
+    forceActionOdds: ForceActionOdds;
 }
 
 /**
