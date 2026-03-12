@@ -1,4 +1,5 @@
 import { Commands } from "./model/Commands";
+import { LifeAction } from "./model/LifeAction";
 
 export class Strings {
 
@@ -83,10 +84,6 @@ export class Strings {
 
     static get provideValidPositiveNumber(): string {
         return "Provide a valid, positive number please ✋";
-    }
-
-    static get workingFailed(): string {
-        return "You lack the motivation to start working.";
     }
 
     static cantSpendMoreThanYouHave(amount: number): string {
@@ -180,5 +177,22 @@ export class Strings {
     
     static placedBounty(bountyPlacer: string, bounty: number, bountyTarget: string): string {
         return `📃 @${bountyPlacer} put a bounty worth ${bounty} points on @${bountyTarget} !`;
+    }
+
+    static actionBlocked(lifeAction: LifeAction): string {
+        let verb;
+
+        if (lifeAction === LifeAction.BREAKOUT) {
+            verb = "break out";
+        } else if (lifeAction === LifeAction.BRIBE) {
+            verb = "bribe";
+        } else if (lifeAction === LifeAction.HUSTLE) {
+            verb = "hustle";
+        } else if (lifeAction === LifeAction.KILL) {
+            verb = "kill";
+        } else if (lifeAction === LifeAction.WORK) {
+            verb = "work";
+        }
+        return `You lack the motivation to ${verb}... 😩`;
     }
 }

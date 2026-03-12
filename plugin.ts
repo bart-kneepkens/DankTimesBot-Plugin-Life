@@ -21,7 +21,8 @@ import { ChatResetEventArguments } from "../../src/plugin-host/plugin-events/eve
 import { CustomEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/custom-event-arguments";
 import { ForceOccupationChangeEventData, OccupationChange } from "./event/ForceOccupationChangeEventData";
 import { OccupationEnum } from "./model/OccupationEnum";
-import { ForceActionOdds, LifeAction, LifeActionEventData } from "./event/LifeActionEventData";
+import { ForceActionOdds, LifeActionEventData } from "./event/LifeActionEventData";
+import { LifeAction } from "./model/LifeAction";
 
 export class Plugin extends AbstractPlugin {
 
@@ -270,7 +271,10 @@ export class Plugin extends AbstractPlugin {
             const eventData = new LifeActionEventData(chat, user, LifeAction.KILL, 0.6);
             this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
-            if (this.lifeActionSucceeded(eventData)) {
+            if (this.lifeActionBlocked(eventData)) {
+                return Strings.actionBlocked(eventData.action);
+
+            } else if (this.lifeActionSucceeded(eventData)) {
                 const minutes = chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
                 this.hospitaliseUser(lifeChatData, lifeUser, minutes);
                 let bountyReward = bounty ? bounty.bounty : 0;
@@ -317,7 +321,10 @@ export class Plugin extends AbstractPlugin {
         const eventData = new LifeActionEventData(chat, user, LifeAction.BREAKOUT, 0.6);
         this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
-        if (this.lifeActionSucceeded(eventData)) {
+        if (this.lifeActionBlocked(eventData)) {
+            return Strings.actionBlocked(eventData.action);
+
+        } else if (this.lifeActionSucceeded(eventData)) {
             inmate.clearOccupation();
             const scoreGained = 380 * chat.getSetting<number>(Strings.HUSTLE_MULTIPLIER_SETTING);
             chat.alterUserScore(new AlterUserScoreArgs(user, scoreGained, Strings.PLUGIN_NAME, ScoreChangeReason.breakoutSucceeded));
@@ -360,7 +367,10 @@ export class Plugin extends AbstractPlugin {
         this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
         const actualBribedAmount = chat.alterUserScore(new AlterUserScoreArgs(user, -amount, Strings.PLUGIN_NAME, ScoreChangeReason.bribe));
 
-        if (this.lifeActionSucceeded(eventData)) {
+        if (this.lifeActionBlocked(eventData)) {
+            return Strings.actionBlocked(eventData.action);
+
+        } else if (this.lifeActionSucceeded(eventData)) {
             inmate.clearOccupation();
             this.helper.addPoliceBounty(chat, user, amount);
             return Strings.bribingSuccessful;
@@ -399,7 +409,10 @@ export class Plugin extends AbstractPlugin {
         const eventData = new LifeActionEventData(chat, user, LifeAction.HUSTLE, 0.6);
         this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
-        if (this.lifeActionSucceeded(eventData)) {
+        if (this.lifeActionBlocked(eventData)) {
+            return Strings.actionBlocked(eventData.action);
+
+        } else if (this.lifeActionSucceeded(eventData)) {
             const scoreToGain = Random.number(60, 700) * multiplier;
             const actualScoreGained = chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, Strings.PLUGIN_NAME, ScoreChangeReason.crimeCommited));
             this.helper.addPoliceBounty(chat, user, scoreToGain);
@@ -434,11 +447,11 @@ export class Plugin extends AbstractPlugin {
         const eventData = new LifeActionEventData(chat, user, LifeAction.WORK);
         this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
-        if (eventData.forceActionOdds !== ForceActionOdds.FORCE_FAILURE) {
+        if (eventData.forceActionOdds !== ForceActionOdds.BLOCK) {
             this.putUserToWork(chat, lifeUser, minutes);
             return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
         }
-        return Strings.workingFailed;
+        return Strings.actionBlocked(eventData.action);
     };
 
     private hospitaliseUser(chat: LifeChatData, user: LifeUser, minutes: number): void {
@@ -481,6 +494,10 @@ export class Plugin extends AbstractPlugin {
     private randomIncarcerationDuration(unlawfulKill: boolean): number {
         const severity = unlawfulKill ? 25 : 10;
         return Random.number(severity, severity * 2);
+    }
+
+    private lifeActionBlocked(eventData: LifeActionEventData) {
+        return eventData.forceActionOdds === ForceActionOdds.BLOCK;
     }
 
     private lifeActionSucceeded(eventData: LifeActionEventData) {

@@ -1,14 +1,14 @@
 import { Chat } from "../../../src/chat/chat";
 import { User } from "../../../src/chat/user/user";
+import { LifeAction } from "../model/LifeAction";
 
 /**
- * Data for the custom event which the Life plugin publishes before a user performs a Life action (work, hustle, kill).
+ * Data for the custom event which the Life plugin publishes before a user performs a Life action (work, hustle, kill, etc.).
  */
 export class LifeActionEventData {
 
     /**
-     * How to handle the odds of the Life action succeeding. Only applicable for hustle and kill.
-     * May be changed to alter the way the odds are handled.
+     * How to handle the odds of the Life action succeeding. May be changed to alter the way the odds are handled.
      */
     public forceActionOdds: ForceActionOdds = ForceActionOdds.NO_FORCE;
 
@@ -27,22 +27,11 @@ export class LifeActionEventData {
         public readonly action: LifeAction,
 
         /**
-         * The odds for this action to succeed, represented as a number between 0 and 1. Only applicable for hustle and kill.
+         * The odds for this action to succeed, represented as a number between 0 and 1. Not applicable for work.
          * May be changed to alter the odds of the action succeeding.
          */
         public odds: number = 0
     ) { }
-}
-
-/**
- * Enum for the currently known Life actions.
- */
-export enum LifeAction {
-    WORK,
-    HUSTLE,
-    KILL,
-    BRIBE,
-    BREAKOUT
 }
 
 /**
@@ -60,5 +49,9 @@ export enum ForceActionOdds {
     /**
      * Force a success, regardless of the odds.
      */
-    FORCE_SUCCESS
+    FORCE_SUCCESS,
+    /**
+     * If the action should be blocked entirely before even attempting it.
+     */
+    BLOCK
 }
