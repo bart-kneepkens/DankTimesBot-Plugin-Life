@@ -1,11 +1,11 @@
 import { Chat } from "../../../src/chat/chat";
 import { User } from "../../../src/chat/user/user";
-import { OccupationEnum } from "./OccupationEnum";
+import { OccupationEnum } from "../model/OccupationEnum";
 
 /**
  * Data for the custom event to which the Life plugin listens.
  */
-export interface ForceOccupationChange {
+export interface ForceOccupationChangeEventData {
     /**
      * The chat from which the occupation change is launched.
      */

@@ -15,16 +15,20 @@ import { LifeChatData } from "./model/LifeChatData";
 import { BotCommandConfirmationQuestion } from "../../src/bot-commands/bot-command-confirmation-question";
 import { PluginHelperFunctions } from "./plugin-helper-functions";
 import { Commands } from "./model/Commands";
-import { ScoreChangeReason } from "./model/ScoreChangeReason";
+import { ScoreChangeReason } from "./event/ScoreChangeReason";
 import { Bounty } from "./model/Bounty";
 import { ChatResetEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/chat-reset-event-arguments";
 import { CustomEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/custom-event-arguments";
-import { ForceOccupationChange, OccupationChange } from "./model/ForceOccupationChange";
+import { ForceOccupationChangeEventData, OccupationChange } from "./event/ForceOccupationChangeEventData";
 import { OccupationEnum } from "./model/OccupationEnum";
+import { ForceActionOdds, LifeAction, LifeActionEventData } from "./event/LifeActionEventData";
 
 export class Plugin extends AbstractPlugin {
 
     private static readonly LIFE_CHATS_DATA_FILE = "life-chats-data.json";
+
+    private static readonly FORCE_OCCUPATION_CHANGE_REASON = "life.force-occupation-change";    // Life plugin listens to this custom plugin event
+    private static readonly ON_LIFE_ACTION_REASON = "life.on-life-action";                      // Life plugin publishes this custom plugin event
 
     private readonly lifeChatsData: Map<number, LifeChatData> = new Map();
     private readonly lifeUsers: LifeUser[] = [];
@@ -45,7 +49,7 @@ export class Plugin extends AbstractPlugin {
             this.saveDataToFile(Plugin.LIFE_CHATS_DATA_FILE, this.lifeChatsData);
         });
         this.subscribeToPluginEvent(PluginEvent.ChatReset, this.onChatReset.bind(this));
-        this.subscribeToPluginEvent(PluginEvent.Custom, this.onForceOccupationChange.bind(this), "*", "life.force-occupation-change");
+        this.subscribeToPluginEvent(PluginEvent.Custom, this.onForceOccupationChange.bind(this), "*", Plugin.FORCE_OCCUPATION_CHANGE_REASON);
         this.helper = new PluginHelperFunctions(this.lifeChatsData, this.lifeUsers);
     }
 
@@ -132,7 +136,7 @@ export class Plugin extends AbstractPlugin {
     }
 
     private onForceOccupationChange(eventArgs: CustomEventArguments): void {
-        const args = eventArgs.eventData as ForceOccupationChange;
+        const args = eventArgs.eventData as ForceOccupationChangeEventData;
         const lifeChat = this.helper.getOrCreateLifeChatsData(args.chat.id);
         const lifeUser = this.helper.findOrCreateUser(args.user);
         const occupation = lifeUser.occupation;
@@ -149,7 +153,7 @@ export class Plugin extends AbstractPlugin {
             }
         } else if (args.occupationChange === OccupationChange.FORCE_CONSCRIPT ||
             (args.occupationChange === OccupationChange.CONSCRIPT && (occupation === null || occupation.asEnum !== OccupationEnum.HOSPITAL))) {
-                
+
             if (args.occupation === OccupationEnum.HOSPITAL) {
                 const minutes = args.minutes > 0 ? args.minutes : args.chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
                 this.hospitaliseUser(lifeChat, lifeUser, minutes);
@@ -263,8 +267,10 @@ export class Plugin extends AbstractPlugin {
             const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser!);
             const lifeUser = this.helper.findOrCreateUser(user);
             const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser!.id) ? targetLifeUser.user.name : targetLifeUser.mentionedUserName;
+            const eventData = new LifeActionEventData(chat, user, LifeAction.KILL, 0.6);
+            this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
-            if (Random.number(0, 100) >= 40) {
+            if (this.lifeActionSucceeded(eventData)) {
                 const minutes = chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
                 this.hospitaliseUser(lifeChatData, lifeUser, minutes);
                 let bountyReward = bounty ? bounty.bounty : 0;
@@ -388,9 +394,10 @@ export class Plugin extends AbstractPlugin {
             return lifeUser.occupation.statusMessage(null);
         }
         const multiplier: number = chat.getSetting(Strings.HUSTLE_MULTIPLIER_SETTING);
-        const successful = Math.random() >= 0.4;
+        const eventData = new LifeActionEventData(chat, user, LifeAction.HUSTLE, 0.6);
+        this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
-        if (successful) {
+        if (this.lifeActionSucceeded(eventData)) {
             const scoreToGain = Random.number(60, 700) * multiplier;
             const actualScoreGained = chat.alterUserScore(new AlterUserScoreArgs(user, scoreToGain, Strings.PLUGIN_NAME, ScoreChangeReason.crimeCommited));
             this.helper.addPoliceBounty(chat, user, scoreToGain);
@@ -422,6 +429,8 @@ export class Plugin extends AbstractPlugin {
         } else {
             minutes = this.randomWorkDuration();
         }
+        const eventData = new LifeActionEventData(chat, user, LifeAction.WORK);
+        this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
         this.putUserToWork(chat, lifeUser, minutes);
         return `${lifeUser.mentionedUserName} ${lifeUser.occupation!.startMessage}`;
     };
@@ -466,5 +475,9 @@ export class Plugin extends AbstractPlugin {
     private randomIncarcerationDuration(unlawfulKill: boolean): number {
         const severity = unlawfulKill ? 25 : 10;
         return Random.number(severity, severity * 2);
+    }
+
+    private lifeActionSucceeded(eventData: LifeActionEventData) {
+        return eventData.forceActionOdds === ForceActionOdds.FORCE_SUCCESS || (eventData.forceActionOdds === ForceActionOdds.NO_FORCE && Math.random() < eventData.odds);
     }
 }
