@@ -2,55 +2,61 @@ import { BotCommand } from "../../src/bot-commands/bot-command";
 import { Chat } from "../../src/chat/chat";
 import { User } from "../../src/chat/user/user";
 import { AbstractPlugin } from "../../src/plugin-host/plugin/plugin";
-import { WageSlaveOccupation, CriminalOccupation, HospitalisedOccupation } from "./model/Occupation";
-import { LifeUser } from "./model/LifeUser";
 import { AlterUserScoreArgs } from "../../src/chat/alter-user-score-args";
-import { Strings } from "./Strings";
-import { Random } from "./Random";
-import TelegramBot from "node-telegram-bot-api";
 import { ChatSettingTemplate } from "../../src/chat/settings/chat-setting-template";
 import { PluginEvent } from "../../src/plugin-host/plugin-events/plugin-event-types";
 import { EmptyEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/empty-event-arguments";
-import { LifeChatData } from "./model/LifeChatData";
 import { BotCommandConfirmationQuestion } from "../../src/bot-commands/bot-command-confirmation-question";
+import { ChatResetEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/chat-reset-event-arguments";
+import { CustomEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/custom-event-arguments";
+
+import TelegramBot from "node-telegram-bot-api";
+
+import { WageSlaveOccupation, CriminalOccupation, HospitalisedOccupation } from "./model/Occupation";
+import { LifeUser } from "./model/LifeUser";
+import { Strings } from "./Strings";
+import { Random } from "./Random";
+import { LifeChatData } from "./model/LifeChatData";
 import { PluginHelperFunctions } from "./plugin-helper-functions";
 import { Commands } from "./model/Commands";
 import { ScoreChangeReason } from "./event/ScoreChangeReason";
 import { Bounty } from "./model/Bounty";
-import { ChatResetEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/chat-reset-event-arguments";
-import { CustomEventArguments } from "../../src/plugin-host/plugin-events/event-arguments/custom-event-arguments";
 import { ForceOccupationChangeEventData, OccupationChange } from "./event/ForceOccupationChangeEventData";
 import { OccupationEnum } from "./model/OccupationEnum";
 import { ForceActionOdds, LifeActionEventData } from "./event/LifeActionEventData";
 import { LifeAction } from "./model/LifeAction";
 
+import { PrePullTriggerEventData } from "../DankTimesBot-Plugin-Russian-Roulette/pre-pull-trigger-event-data";
+import { PostPullTriggerEventData } from "../DankTimesBot-Plugin-Russian-Roulette/post-pull-trigger-event-data";
+
 export class Plugin extends AbstractPlugin {
 
     private static readonly LIFE_CHATS_DATA_FILE = "life-chats-data.json";
 
-    private static readonly FORCE_OCCUPATION_CHANGE_REASON = "life.force-occupation-change";    // Life plugin listens to this custom plugin event
-    private static readonly ON_LIFE_ACTION_REASON = "life.on-life-action";                      // Life plugin publishes this custom plugin event
+    // Life plugin listens to these custom plugin events
+    private static readonly FORCE_OCCUPATION_CHANGE_REASON = "life.force-occupation-change";    // For generic use
+    private static readonly RUSSIAN_ROULETTE_PLUGIN_NAME = "Russian Roulette";                  // Russian Roulette plugin name
+    private static readonly PRE_PULL_TRIGGER_REASON = "russian-roulette.pre-pull-trigger";      // From Russian Roulette
+    private static readonly POST_PULL_TRIGGER_REASON = "russian-roulette.post-pull-trigger";    // From Russian Roulette
 
+    // Life plugin publishes this custom plugin event
+    private static readonly ON_LIFE_ACTION_REASON = "life.on-life-action";
+
+    // Life plugin data
     private readonly lifeChatsData: Map<number, LifeChatData> = new Map();
     private readonly lifeUsers: LifeUser[] = [];
     private readonly helper: PluginHelperFunctions;
 
     constructor() {
         super(Strings.PLUGIN_NAME, "1.3.0");
+
         this.subscribeToPluginEvent(PluginEvent.BotStartup, this.onBotStartup.bind(this));
-        this.subscribeToPluginEvent(PluginEvent.BotShutdown, () => {
-            this.lifeChatsData.forEach((data) => {
-                data.usersInHospital?.forEach((uih) => {
-                    const chat = this.getChat(data.chatId);
-                    const user = chat!.getOrCreateUser(uih.userId);
-                    const lifeUser = this.helper.findOrCreateUser(user);
-                    uih.minutes = lifeUser.occupation!.remainingTimeMinutes;
-                });
-            });
-            this.saveDataToFile(Plugin.LIFE_CHATS_DATA_FILE, this.lifeChatsData);
-        });
+        this.subscribeToPluginEvent(PluginEvent.BotShutdown, this.onBotShutdown.bind(this));
         this.subscribeToPluginEvent(PluginEvent.ChatReset, this.onChatReset.bind(this));
         this.subscribeToPluginEvent(PluginEvent.Custom, this.onForceOccupationChange.bind(this), "*", Plugin.FORCE_OCCUPATION_CHANGE_REASON);
+        this.subscribeToPluginEvent(PluginEvent.Custom, this.onPrePullTriggerReason.bind(this), Plugin.RUSSIAN_ROULETTE_PLUGIN_NAME, Plugin.PRE_PULL_TRIGGER_REASON);
+        this.subscribeToPluginEvent(PluginEvent.Custom, this.onPostPullTriggerReason.bind(this), Plugin.RUSSIAN_ROULETTE_PLUGIN_NAME, Plugin.POST_PULL_TRIGGER_REASON);
+
         this.helper = new PluginHelperFunctions(this.lifeChatsData, this.lifeUsers);
     }
 
@@ -126,6 +132,18 @@ export class Plugin extends AbstractPlugin {
         });
     }
 
+    private onBotShutdown(eventArgs: EmptyEventArguments): void {
+        this.lifeChatsData.forEach((data) => {
+            data.usersInHospital?.forEach((uih) => {
+                const chat = this.getChat(data.chatId);
+                const user = chat!.getOrCreateUser(uih.userId);
+                const lifeUser = this.helper.findOrCreateUser(user);
+                uih.minutes = lifeUser.occupation!.remainingTimeMinutes;
+            });
+        });
+        this.saveDataToFile(Plugin.LIFE_CHATS_DATA_FILE, this.lifeChatsData);
+    }
+
     private onChatReset(eventArgs: ChatResetEventArguments): void {
         const chatData = this.helper.getOrCreateLifeChatsData(eventArgs.chat.id);
         chatData.bounties = [];
@@ -143,7 +161,7 @@ export class Plugin extends AbstractPlugin {
         const occupation = lifeUser.occupation;
 
         if (args.occupationChange === OccupationChange.RELEASE) {
-            if (occupation === null || occupation.asEnum !== args.occupation) {
+            if (occupation?.asEnum !== args.occupation) {
                 args.success = false;
                 args.errorMessage = "User is not currently in that occupation";
 
@@ -153,7 +171,7 @@ export class Plugin extends AbstractPlugin {
                 args.errorMessage = "";
             }
         } else if (args.occupationChange === OccupationChange.FORCE_CONSCRIPT ||
-            (args.occupationChange === OccupationChange.CONSCRIPT && (occupation === null || occupation.asEnum !== OccupationEnum.HOSPITAL))) {
+            (args.occupationChange === OccupationChange.CONSCRIPT && occupation?.asEnum !== OccupationEnum.HOSPITAL)) {
 
             if (args.occupation === OccupationEnum.HOSPITAL) {
                 const minutes = args.minutes > 0 ? args.minutes : args.chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
@@ -173,6 +191,32 @@ export class Plugin extends AbstractPlugin {
         } else {
             args.success = false;
             args.errorMessage = "This occupation change is not allowed";
+        }
+    }
+
+    /**
+     * From Russian Roulette. If the user is already in the hospital, don't allow them to pull the trigger again.
+     */
+    private onPrePullTriggerReason(eventArgs: CustomEventArguments): void {
+        const args = eventArgs.eventData as PrePullTriggerEventData;
+        const lifeUser = this.helper.findOrCreateUser(args.user);
+
+        if (lifeUser.occupation?.asEnum === OccupationEnum.HOSPITAL) {
+            args.allowTriggerPull = false;
+        }
+    }
+
+    /**
+     * From Russian Roulette. If the user 'died', then force them into the hospital.
+     */
+    private onPostPullTriggerReason(eventArgs: CustomEventArguments): void {
+        const args = eventArgs.eventData as PostPullTriggerEventData;
+
+        if (args.playerDied) {
+            const lifeChat = this.helper.getOrCreateLifeChatsData(args.chat.id);
+            const lifeUser = this.helper.findOrCreateUser(args.user);
+            const minutes = this.defaultHospitalDuration(args.chat);
+            this.hospitaliseUser(lifeChat, lifeUser, minutes);
         }
     }
 
@@ -275,7 +319,7 @@ export class Plugin extends AbstractPlugin {
                 return Strings.actionBlocked(eventData.action);
 
             } else if (this.lifeActionSucceeded(eventData)) {
-                const minutes = chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
+                const minutes = this.defaultHospitalDuration(chat);
                 this.hospitaliseUser(lifeChatData, lifeUser, minutes);
                 let bountyReward = bounty ? bounty.bounty : 0;
                 bountyReward = chat.alterUserScore(new AlterUserScoreArgs(user, bountyReward, Strings.PLUGIN_NAME, ScoreChangeReason.receivedBounty));
@@ -494,6 +538,10 @@ export class Plugin extends AbstractPlugin {
     private randomIncarcerationDuration(unlawfulKill: boolean): number {
         const severity = unlawfulKill ? 25 : 10;
         return Random.number(severity, severity * 2);
+    }
+
+    private defaultHospitalDuration(chat: Chat): number {
+        return chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
     }
 
     private lifeActionBlocked(eventData: LifeActionEventData) {
