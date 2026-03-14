@@ -195,7 +195,7 @@ export class Plugin extends AbstractPlugin {
     }
 
     /**
-     * From Russian Roulette. If the user is already in the hospital, don't allow them to pull the trigger again.
+     * From Russian Roulette. If the user is already in the hospital, don't allow them to pull the trigger (again).
      */
     private onPrePullTriggerReason(eventArgs: CustomEventArguments): void {
         const args = eventArgs.eventData as PrePullTriggerEventData;
@@ -203,6 +203,7 @@ export class Plugin extends AbstractPlugin {
 
         if (lifeUser.occupation?.asEnum === OccupationEnum.HOSPITAL) {
             args.allowTriggerPull = false;
+            args.whyNotExplanation = lifeUser.occupation.statusMessage(null);
         }
     }
 
