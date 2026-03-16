@@ -313,7 +313,7 @@ export class Plugin extends AbstractPlugin {
             const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser!);
             const lifeUser = this.helper.findOrCreateUser(user);
             const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser!.id) ? targetLifeUser.user.name : targetLifeUser.mentionedUserName;
-            const eventData: LifeActionEventData = { chat, user, action: LifeAction.KILL, odds: 0.6, forceActionOdds: ForceActionOdds.NO_FORCE };
+            const eventData: LifeActionEventData = { chat, user, targetUser: preparation.targetUser!, action: LifeAction.KILL, odds: 0.5, forceActionOdds: ForceActionOdds.NO_FORCE };
             this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
             if (this.lifeActionBlocked(eventData)) {
@@ -363,7 +363,7 @@ export class Plugin extends AbstractPlugin {
             return `${lifeUser.mentionedUserName} ${Strings.isNotInPrison(inmate.user.name)}`;
         }
 
-        const eventData: LifeActionEventData = { chat, user, action: LifeAction.BREAKOUT, odds: 0.6, forceActionOdds: ForceActionOdds.NO_FORCE };
+        const eventData: LifeActionEventData = { chat, user, targetUser: inmateUser, action: LifeAction.BREAKOUT, odds: 0.6, forceActionOdds: ForceActionOdds.NO_FORCE };
         this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
         if (this.lifeActionBlocked(eventData)) {
@@ -408,7 +408,7 @@ export class Plugin extends AbstractPlugin {
             return Strings.cantSpendMoreThanYouHave(amount);
         }
         const odds = (amount / totalFunds) * 4.2;
-        const eventData: LifeActionEventData = { chat, user, action: LifeAction.BRIBE, odds, forceActionOdds: ForceActionOdds.NO_FORCE };
+        const eventData: LifeActionEventData = { chat, user, targetUser: user, action: LifeAction.BRIBE, odds, forceActionOdds: ForceActionOdds.NO_FORCE };
         this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
         const actualBribedAmount = chat.alterUserScore(new AlterUserScoreArgs(user, -amount, Strings.PLUGIN_NAME, ScoreChangeReason.bribe));
 
@@ -451,7 +451,7 @@ export class Plugin extends AbstractPlugin {
             return lifeUser.occupation.statusMessage(null);
         }
         const multiplier: number = chat.getSetting(Strings.HUSTLE_MULTIPLIER_SETTING);
-        const eventData: LifeActionEventData = { chat, user, action: LifeAction.HUSTLE, odds: 0.6, forceActionOdds: ForceActionOdds.NO_FORCE };
+        const eventData: LifeActionEventData = { chat, user, targetUser: user, action: LifeAction.HUSTLE, odds: 0.6, forceActionOdds: ForceActionOdds.NO_FORCE };
         this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
         if (this.lifeActionBlocked(eventData)) {
@@ -489,7 +489,7 @@ export class Plugin extends AbstractPlugin {
         } else {
             minutes = this.randomWorkDuration();
         }
-        const eventData: LifeActionEventData = { chat, user, action: LifeAction.WORK, odds: 0, forceActionOdds: ForceActionOdds.NO_FORCE };
+        const eventData: LifeActionEventData = { chat, user, targetUser: user, action: LifeAction.WORK, odds: 0, forceActionOdds: ForceActionOdds.NO_FORCE };
         this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
         if (eventData.forceActionOdds !== ForceActionOdds.BLOCK) {

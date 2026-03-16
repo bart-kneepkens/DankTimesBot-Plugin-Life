@@ -16,6 +16,10 @@ export interface LifeActionEventData {
      */
     readonly user: User;
     /**
+     * The target user. For some actions, this is the same as the user performing the action.
+     */
+    readonly targetUser: User;
+    /**
      * The actual Life action being performed.
      */
     readonly action: LifeAction;
