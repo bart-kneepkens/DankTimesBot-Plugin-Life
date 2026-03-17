@@ -293,7 +293,7 @@ export class Plugin extends AbstractPlugin {
     }
 
     private kill(chat: Chat, user: User, msg: TelegramBot.Message, match: string): string | BotCommandConfirmationQuestion {
-        const preparation = this.helper.prepareKill(chat, user, match);
+        const preparation = this.helper.prepareKill(chat, user, msg, match);
 
         if (preparation.errorMsg) {
             return preparation.errorMsg;
@@ -302,7 +302,7 @@ export class Plugin extends AbstractPlugin {
         question.confirmationQuestionText = `💀 Making an attempt on ${preparation.targetUser!.name}'s life will cost ${preparation.killCosts} points. Type 'yes' to confirm.`;
 
         question.actionOnConfirm = () => {
-            const preparation = this.helper.prepareKill(chat, user, match);
+            const preparation = this.helper.prepareKill(chat, user, msg, match);
 
             if (preparation.errorMsg) {
                 return preparation.errorMsg;

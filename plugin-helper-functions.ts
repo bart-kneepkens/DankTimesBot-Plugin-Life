@@ -1,5 +1,7 @@
+import TelegramBot from "node-telegram-bot-api";
 import { Chat } from "../../src/chat/chat";
 import { User } from "../../src/chat/user/user";
+
 import { Bounty } from "./model/Bounty";
 import { LifeChatData } from "./model/LifeChatData";
 import { LifeUser } from "./model/LifeUser";
@@ -51,21 +53,28 @@ export class PluginHelperFunctions {
         }
     }
 
-    public prepareKill(chat: Chat, user: User, match: string): { errorMsg: string | null, killCosts: number | null, targetUser: User | null } {
+    public prepareKill(chat: Chat, user: User, msg: TelegramBot.Message, match: string): { errorMsg: string | null, killCosts: number | null, targetUser: User | null } {
         const lifeUser = this.findOrCreateUser(user);
 
         if (lifeUser.occupation) {
             return { errorMsg: lifeUser.occupation.statusMessage(null), killCosts: null, targetUser: null };
         }
-        if (!match) {
-            return { errorMsg: Strings.killTooFewArgumentsError, killCosts: null, targetUser: null };
-        }
-        const parameters = match.split(" ");
+        let targetUser: User | null = null;
 
-        if (parameters.length < 1) {
+        if (!!msg.reply_to_message?.from?.id && !msg.reply_to_message.from.is_bot) {
+            targetUser = chat.getOrCreateUser(msg.reply_to_message.from.id);
+
+        } else if (!match) {
             return { errorMsg: Strings.killTooFewArgumentsError, killCosts: null, targetUser: null };
+
+        } else {
+            const parameters = match.split(" ");
+
+            if (parameters.length < 1) {
+                return { errorMsg: Strings.killTooFewArgumentsError, killCosts: null, targetUser: null };
+            }
+            targetUser = this.getChatUserFromParameter(chat, parameters[0]);
         }
-        const targetUser = this.getChatUserFromParameter(chat, parameters[0]);
 
         if (targetUser === null) {
             return { errorMsg: Strings.userDoesNotExist, killCosts: null, targetUser: null };
@@ -122,7 +131,7 @@ export class PluginHelperFunctions {
         return lifeChatData;
     }
 
-    public getTotalBountyForUser(bounties: Bounty[], userId: number) : number {
+    public getTotalBountyForUser(bounties: Bounty[], userId: number): number {
         return bounties
             .filter((bounty) => bounty.userId === userId)
             .map((bounty) => bounty.bounty)

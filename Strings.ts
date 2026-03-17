@@ -59,7 +59,7 @@ export class Strings {
     }
 
     static get killTooFewArgumentsError(): string {
-        return "✋ You have to specify a user, e.g. /kill @User";
+        return "✋ You have to reply to or specify a user, e.g. /kill @User";
     }
 
     static get userDoesNotExist(): string {
