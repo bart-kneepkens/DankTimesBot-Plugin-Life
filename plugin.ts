@@ -313,7 +313,7 @@ export class Plugin extends AbstractPlugin {
             const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser!);
             const lifeUser = this.helper.findOrCreateUser(user);
             const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser!.id) ? targetLifeUser.user.name : targetLifeUser.mentionedUserName;
-            const eventData: LifeActionEventData = { chat, user, targetUser: preparation.targetUser!, action: LifeAction.KILL, odds: 0.5, forceActionOdds: ForceActionOdds.NO_FORCE };
+            const eventData: LifeActionEventData = { chat, user, targetUser: preparation.targetUser!, action: LifeAction.KILL, odds: 0.45, forceActionOdds: ForceActionOdds.NO_FORCE };
             this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
             if (this.lifeActionBlocked(eventData)) {
