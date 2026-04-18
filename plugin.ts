@@ -48,7 +48,7 @@ export class Plugin extends AbstractPlugin {
     private readonly helper: PluginHelperFunctions;
 
     constructor() {
-        super(Strings.PLUGIN_NAME, "1.3.0");
+        super(Strings.PLUGIN_NAME, "1.4.0");
 
         this.subscribeToPluginEvent(PluginEvent.BotStartup, this.onBotStartup.bind(this));
         this.subscribeToPluginEvent(PluginEvent.BotShutdown, this.onBotShutdown.bind(this));
@@ -167,11 +167,16 @@ export class Plugin extends AbstractPlugin {
 
             } else {
                 lifeUser.clearOccupation();
+                this.unhospitaliseUser(lifeChat, lifeUser); // Safe action even when not hospitalised
                 args.success = true;
                 args.errorMessage = "";
             }
         } else if (args.occupationChange === OccupationChange.FORCE_CONSCRIPT ||
             (args.occupationChange === OccupationChange.CONSCRIPT && occupation?.asEnum !== OccupationEnum.HOSPITAL)) {
+
+            this.unhospitaliseUser(lifeChat, lifeUser); // Safe action even when not hospitalised
+            args.success = true;
+            args.errorMessage = "";
 
             if (args.occupation === OccupationEnum.HOSPITAL) {
                 const minutes = args.minutes > 0 ? args.minutes : args.chat.getSetting<number>(Strings.HOSPITAL_DURATION_MINUTES_SETTING);
@@ -184,10 +189,7 @@ export class Plugin extends AbstractPlugin {
             } else if (args.occupation === OccupationEnum.OFFICE) {
                 const minutes = args.minutes > 0 ? args.minutes : this.randomWorkDuration();
                 this.putUserToWork(args.chat, lifeUser, minutes);
-            }
-            args.success = true;
-            args.errorMessage = "";
-
+            }   
         } else {
             args.success = false;
             args.errorMessage = "This occupation change is not allowed";
@@ -507,9 +509,13 @@ export class Plugin extends AbstractPlugin {
             if (!chat.usersNotTagged.includes(user.user.id)) {
                 this.sendMessage(chat.chatId, `${user.mentionedUserName} ${Strings.releasedFromHospital}`);
             }
-            chat.usersInHospital = chat.usersInHospital.filter((uih) => uih.userId !== user.user.id);
+            this.unhospitaliseUser(chat, user);
         });
         chat.usersInHospital.push({ userId: user.user.id, minutes: minutes });
+    }
+
+    private unhospitaliseUser(chat: LifeChatData, user: LifeUser): void {
+        chat.usersInHospital = chat.usersInHospital.filter((uih) => uih.userId !== user.user.id);
     }
 
     private incarcerateUser(chat: LifeChatData, user: LifeUser, minutes: number): void {
