@@ -48,7 +48,7 @@ export class Plugin extends AbstractPlugin {
     private readonly helper: PluginHelperFunctions;
 
     constructor() {
-        super(Strings.PLUGIN_NAME, "1.4.0");
+        super(Strings.PLUGIN_NAME, "1.4.1");
 
         this.subscribeToPluginEvent(PluginEvent.BotStartup, this.onBotStartup.bind(this));
         this.subscribeToPluginEvent(PluginEvent.BotShutdown, this.onBotShutdown.bind(this));
@@ -312,9 +312,9 @@ export class Plugin extends AbstractPlugin {
             chat.alterUserScore(new AlterUserScoreArgs(user, -preparation.killCosts!, Strings.PLUGIN_NAME, ScoreChangeReason.killPlayer));
             const lifeChatData = this.helper.getOrCreateLifeChatsData(chat.id);
             const bounty = lifeChatData.bounties.find((bounty) => bounty.userId === preparation.targetUser!.id);
-            const targetLifeUser = this.helper.findOrCreateUser(preparation.targetUser!);
-            const lifeUser = this.helper.findOrCreateUser(user);
-            const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser!.id) ? targetLifeUser.user.name : targetLifeUser.mentionedUserName;
+            const victimLifeUser = this.helper.findOrCreateUser(preparation.targetUser!);
+            const killerLifeUser = this.helper.findOrCreateUser(user);
+            const woundedUsername = lifeChatData.usersNotTagged.includes(preparation.targetUser!.id) ? victimLifeUser.user.name : victimLifeUser.mentionedUserName;
             const eventData: LifeActionEventData = { chat, user, targetUser: preparation.targetUser!, action: LifeAction.KILL, odds: 0.45, forceActionOdds: ForceActionOdds.NO_FORCE };
             this.fireCustomEvent(Plugin.ON_LIFE_ACTION_REASON, eventData);
 
@@ -323,7 +323,7 @@ export class Plugin extends AbstractPlugin {
 
             } else if (this.lifeActionSucceeded(eventData)) {
                 const minutes = this.defaultHospitalDuration(chat);
-                this.hospitaliseUser(lifeChatData, lifeUser, minutes);
+                this.hospitaliseUser(lifeChatData, victimLifeUser, minutes);
                 let bountyReward = bounty ? bounty.bounty : 0;
                 bountyReward = chat.alterUserScore(new AlterUserScoreArgs(user, bountyReward, Strings.PLUGIN_NAME, ScoreChangeReason.receivedBounty));
 
@@ -337,10 +337,11 @@ export class Plugin extends AbstractPlugin {
                 return `💀 @${user.name} has mortally wounded ${woundedUsername} and claimed a ${bountyReward} points bounty!`;
 
             } else if (!bounty || !bounty.isPoliceBounty) {
-                this.incarcerateUser(lifeChatData, lifeUser, this.randomIncarcerationDuration(true));
-                return `😞 ${lifeUser.mentionedUserName} failed to kill ${woundedUsername} and has been imprisoned for ${Strings.minutes(lifeUser.occupation!.waitingTime)} for the unlawful attempt 👮🏻`;
+                this.incarcerateUser(lifeChatData, killerLifeUser, this.randomIncarcerationDuration(true));
+                // eslint-disable-next-line max-len
+                return `😞 ${killerLifeUser.mentionedUserName} failed to kill ${woundedUsername} and has been imprisoned for ${Strings.minutes(killerLifeUser.occupation!.waitingTime)} for the unlawful attempt 👮🏻`;
             }
-            return `😞 ${lifeUser.mentionedUserName} failed to kill ${woundedUsername}. They live to shitpost another day 🌞`;
+            return `😞 ${killerLifeUser.mentionedUserName} failed to kill ${woundedUsername}. They live to shitpost another day 🌞`;
         };
         return question;
     }
