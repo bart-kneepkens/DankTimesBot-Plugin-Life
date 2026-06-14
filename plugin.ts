@@ -48,7 +48,7 @@ export class Plugin extends AbstractPlugin {
     private readonly helper: PluginHelperFunctions;
 
     constructor() {
-        super(Strings.PLUGIN_NAME, "1.4.1");
+        super(Strings.PLUGIN_NAME, "1.5.0");
 
         this.subscribeToPluginEvent(PluginEvent.BotStartup, this.onBotStartup.bind(this));
         this.subscribeToPluginEvent(PluginEvent.BotShutdown, this.onBotShutdown.bind(this));
@@ -83,7 +83,9 @@ export class Plugin extends AbstractPlugin {
     public getPluginSpecificChatSettings(): Array<ChatSettingTemplate<any>> {
         return [
             new ChatSettingTemplate(Strings.WORK_MULTIPLIER_SETTING, "work reward multiplier", 1, (original) => Number(original), (value) => null),
+            new ChatSettingTemplate(Strings.WORK_ENABLED_SETTING, "working enabled", true, (original) => original.toLowerCase() === "true", (value) => null),
             new ChatSettingTemplate(Strings.HUSTLE_MULTIPLIER_SETTING, "hustle reward multiplier", 1, (original) => Number(original), (value) => null),
+            new ChatSettingTemplate(Strings.HUSTLE_ENABLED_SETTING, "hustling enabled", true, (original) => original.toLowerCase() === "true", (value) => null),
             new ChatSettingTemplate(Strings.KILL_COST_PERCENTAGE_SETTING, "percentage of victim's points required to kill", 10, (original) => Number(original), (value) => null),
             new ChatSettingTemplate(Strings.KILL_COST_BOUNTY_MULTIPLIER_SETTING, "multiplier of killer's bounty required to kill", 1, (original) => Number(original), (value) => null),
             new ChatSettingTemplate(Strings.HOSPITAL_DURATION_MINUTES_SETTING, "duration in minutes player stays in hospital after 'killed'", 60 * 8, (original) => Number(original), (value) => null),
@@ -448,6 +450,9 @@ export class Plugin extends AbstractPlugin {
     };
 
     private hustle = (chat: Chat, user: User): string => {
+        if (!chat.getSetting<boolean>(Strings.HUSTLE_ENABLED_SETTING)) {
+            return "Hustling is disabled for this chat 😔";
+        }
         const lifeUser = this.helper.findOrCreateUser(user);
 
         if (lifeUser.occupation) {
@@ -473,6 +478,9 @@ export class Plugin extends AbstractPlugin {
     };
 
     private work = (chat: Chat, user: User, msg: TelegramBot.Message, params: string): string => {
+        if (!chat.getSetting<boolean>(Strings.WORK_ENABLED_SETTING)) {
+            return "Working is disabled for this chat 😔";
+        }
         const lifeUser = this.helper.findOrCreateUser(user);
 
         if (lifeUser.occupation) {

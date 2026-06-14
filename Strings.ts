@@ -4,10 +4,16 @@ import { LifeAction } from "./model/LifeAction";
 export class Strings {
 
     public static readonly PLUGIN_NAME = "Life";
+
     public static readonly WORK_MULTIPLIER_SETTING = "life.work.multiplier";
+    public static readonly WORK_ENABLED_SETTING = "life.work.enabled";
+
     public static readonly HUSTLE_MULTIPLIER_SETTING = "life.hustle.multiplier";
+    public static readonly HUSTLE_ENABLED_SETTING = "life.hustle.enabled";
+
     public static readonly KILL_COST_PERCENTAGE_SETTING = "life.kill.cost.percentage";
     public static readonly KILL_COST_BOUNTY_MULTIPLIER_SETTING = "life.kill.cost.bountymultiplier";
+
     public static readonly HOSPITAL_DURATION_MINUTES_SETTING = "life.hospital.duration.minutes";
 
     static minutes(value: number): string {
